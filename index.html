@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF to DXF — CAD-Quality Converter for Engineers</title>
+<meta name="description" content="Convert PDF to DXF online. Preserves vector lines, layers, text and lineweights. Built for engineers and CAD professionals.">
+<meta name="keywords" content="pdf to dxf, pdf to dxf online free, convert pdf to dxf, pdf to autocad, pdf to dwg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg:        #0a0a0f;
+    --surface:   #13131a;
+    --border:    #1e1e2e;
+    --accent:    #00e5ff;
+    --accent2:   #ff6b35;
+    --text:      #e8e8f0;
+    --muted:     #5a5a78;
+    --success:   #00ff9d;
+    --error:     #ff4060;
+    --grid:      rgba(0,229,255,0.03);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glow orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.12;
+  }
+  .orb-1 { width: 600px; height: 600px; background: var(--accent); top: -200px; right: -100px; }
+  .orb-2 { width: 400px; height: 400px; background: var(--accent2); bottom: 10%; left: -100px; }
+
+  /* Layout */
+  .container { max-width: 900px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* Header */
+  header {
+    padding: 28px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 18px;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--muted); }
+
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+    margin-left: 28px;
+  }
+  nav a:hover { color: var(--text); }
+
+  /* Hero */
+  .hero {
+    padding: 72px 0 48px;
+    text-align: center;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,229,255,0.08);
+    border: 1px solid rgba(0,229,255,0.2);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+  }
+  .badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  h1 {
+    font-size: clamp(40px, 7vw, 72px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -2px;
+    margin-bottom: 20px;
+  }
+  h1 .line-accent { color: var(--accent); }
+  h1 .line-dim { color: var(--muted); font-weight: 400; }
+
+  .hero-sub {
+    font-size: 17px;
+    color: var(--muted);
+    max-width: 520px;
+    margin: 0 auto 48px;
+    line-height: 1.7;
+    font-weight: 400;
+  }
+
+  /* Stats bar */
+  .stats {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin-bottom: 56px;
+    flex-wrap: wrap;
+  }
+  .stat { text-align: center; }
+  .stat-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 22px;
+    color: var(--accent);
+    display: block;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 2px;
+  }
+
+  /* Upload zone */
+  .upload-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 48px 40px;
+    margin-bottom: 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .upload-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.5;
+  }
+
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 56px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(0,229,255,0.04);
+  }
+  .drop-zone.drag-over { transform: scale(1.01); }
+
+  .drop-icon {
+    width: 56px; height: 56px;
+    margin: 0 auto 20px;
+    position: relative;
+  }
+  .drop-icon svg { width: 100%; height: 100%; }
+
+  .drop-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .drop-sub {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .drop-sub strong { color: var(--text); }
+
+  #fileInput { display: none; }
+
+  /* Options row */
+  .options-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-top: 24px;
+  }
+
+  .option-group label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  select, input[type="text"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  select:focus, input:focus { border-color: var(--accent); }
+
+  /* Convert button */
+  .btn-convert {
+    width: 100%;
+    margin-top: 28px;
+    padding: 16px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+  }
+  .btn-convert:hover { background: #33ecff; transform: translateY(-1px); box-shadow: 0 8px 32px rgba(0,229,255,0.3); }
+  .btn-convert:active { transform: translateY(0); }
+  .btn-convert:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
+
+  /* File queue */
+  .file-queue { margin-top: 20px; display: none; }
+  .file-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    animation: slideIn 0.2s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .file-name { flex: 1; font-family: 'Space Mono', monospace; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-size { color: var(--muted); font-size: 11px; font-family: 'Space Mono', monospace; }
+  .file-remove { color: var(--muted); cursor: pointer; transition: color 0.2s; font-size: 18px; line-height: 1; }
+  .file-remove:hover { color: var(--error); }
+
+  /* Progress */
+  .progress-wrap { display: none; margin-top: 28px; }
+  .progress-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; font-family: 'Space Mono', monospace; }
+  .progress-label { color: var(--muted); }
+  .progress-pct { color: var(--accent); }
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 100px;
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+  .progress-status { margin-top: 10px; font-size: 12px; color: var(--muted); font-family: 'Space Mono', monospace; }
+
+  /* Result */
+  .result-card {
+    display: none;
+    background: rgba(0,255,157,0.04);
+    border: 1px solid rgba(0,255,157,0.2);
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 24px;
+    text-align: center;
+  }
+  .result-title { font-size: 16px; font-weight: 600; color: var(--success); margin-bottom: 6px; }
+  .result-meta { font-size: 12px; color: var(--muted); font-family: 'Space Mono', monospace; margin-bottom: 20px; }
+  .btn-download {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    background: var(--success);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .btn-download:hover { background: #33ffb5; transform: translateY(-1px); }
+
+  /* Error */
+  .error-card {
+    display: none;
+    background: rgba(255,64,96,0.04);
+    border: 1px solid rgba(255,64,96,0.2);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-top: 24px;
+    font-size: 13px;
+    color: var(--error);
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* Usage indicator */
+  .usage-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    background: rgba(255,107,53,0.06);
+    border: 1px solid rgba(255,107,53,0.15);
+    border-radius: 10px;
+    margin-top: 20px;
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+  }
+  .usage-text { color: var(--muted); flex: 1; }
+  .usage-text strong { color: var(--accent2); }
+  .btn-pro {
+    padding: 6px 14px;
+    background: var(--accent2);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .btn-pro:hover { background: #ff8c5f; }
+
+  /* AdSense placeholder */
+  .ad-slot {
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin: 32px 0;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* Replace above with real AdSense ins tag */
+
+  /* Features */
+  .features { padding: 64px 0; }
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .section-title { font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-bottom: 48px; }
+
+  .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+  .feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 24px;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+  .feature-card:hover { border-color: rgba(0,229,255,0.3); transform: translateY(-3px); }
+  .feature-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at top left, rgba(0,229,255,0.05), transparent 60%);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .feature-card:hover::after { opacity: 1; }
+
+  .feature-icon {
+    width: 40px; height: 40px;
+    background: rgba(0,229,255,0.08);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+    font-size: 20px;
+  }
+  .feature-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+  .feature-desc { font-size: 13px; color: var(--muted); line-height: 1.6; font-weight: 400; }
+
+  /* Comparison table */
+  .compare { padding: 48px 0 64px; }
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .compare-table th {
+    padding: 14px 20px;
+    text-align: left;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-table th:not(:first-child) { text-align: center; }
+  .compare-table td {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .compare-table td:not(:first-child) { text-align: center; }
+  .compare-table tr:hover td { background: rgba(255,255,255,0.01); }
+  .compare-table .our-col { color: var(--text); }
+  .compare-table .our-header { color: var(--accent); }
+  .check { color: var(--success); font-size: 16px; }
+  .cross { color: var(--muted); }
+  .partial { color: var(--accent2); }
+
+  /* Pricing */
+  .pricing { padding: 48px 0 80px; }
+  .pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 600px; margin: 0 auto; }
+
+  .plan-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px 28px;
+    position: relative;
+  }
+  .plan-card.featured {
+    border-color: var(--accent);
+    background: rgba(0,229,255,0.04);
+  }
+  .plan-card.featured::before {
+    content: 'POPULAR';
+    position: absolute;
+    top: -10px; right: 20px;
+    background: var(--accent);
+    color: #000;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 100px;
+    letter-spacing: 0.08em;
+  }
+  .plan-name { font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-family: 'Space Mono', monospace; margin-bottom: 12px; }
+  .plan-price { font-size: 40px; font-weight: 800; letter-spacing: -2px; margin-bottom: 4px; }
+  .plan-price span { font-size: 16px; color: var(--muted); font-weight: 400; letter-spacing: 0; }
+  .plan-desc { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+  .plan-features { list-style: none; margin-bottom: 28px; }
+  .plan-features li {
+    padding: 8px 0;
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+  .plan-features li:last-child { border-bottom: none; }
+  .plan-features li .check { font-size: 14px; }
+  .btn-plan {
+    width: 100%;
+    padding: 13px;
+    border-radius: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+  }
+  .btn-plan-free { background: var(--border); color: var(--text); }
+  .btn-plan-free:hover { background: #2a2a3e; }
+  .btn-plan-pro { background: var(--accent); color: #000; }
+  .btn-plan-pro:hover { background: #33ecff; transform: translateY(-1px); }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px 0;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+  footer a { color: var(--muted); text-decoration: none; margin: 0 12px; }
+  footer a:hover { color: var(--text); }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .options-row { grid-template-columns: 1fr; }
+    .feature-grid { grid-template-columns: 1fr; }
+    .pricing-grid { grid-template-columns: 1fr; }
+    h1 { letter-spacing: -1px; }
+    .stats { gap: 24px; }
+    nav { display: none; }
+  }
+
+  /* Spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(0,0,0,0.3);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+</style>
+</head>
+<body>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<!-- Header -->
+<div class="container">
+  <header>
+    <div class="logo">pdf<span>2</span>dxf<span>.io</span></div>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#compare">Compare</a>
+    </nav>
+  </header>
+</div>
+
+<!-- Hero -->
+<div class="container">
+  <section class="hero">
+    <div class="badge">CAD-Quality Conversion Engine</div>
+    <h1>
+      <span class="line-dim">PDF to DXF</span><br>
+      <span class="line-accent">that actually works</span>
+    </h1>
+    <p class="hero-sub">
+      Preserves vector lines, layers, text entities and lineweights.<br>
+      Built by engineers, for engineers.
+    </p>
+    <div class="stats">
+      <div class="stat"><span class="stat-num">R2018</span><span class="stat-label">DXF Version</span></div>
+      <div class="stat"><span class="stat-num">100MB</span><span class="stat-label">Max File Size</span></div>
+      <div class="stat"><span class="stat-num">100%</span><span class="stat-label">Browser-based</span></div>
+      <div class="stat"><span class="stat-num">0</span><span class="stat-label">Signups needed</span></div>
+    </div>
+  </section>
+
+  <!-- Upload Card -->
+  <div class="upload-card">
+
+    <!-- Drop Zone -->
+    <div class="drop-zone" id="dropZone">
+      <div class="drop-icon">
+        <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="4" width="32" height="40" rx="3" fill="#1e1e2e" stroke="#2a2a3e" stroke-width="1.5"/>
+          <path d="M30 4v10h10" stroke="#00e5ff" stroke-width="1.5" fill="none"/>
+          <path d="M20 30 L28 22 L36 30" stroke="#00e5ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <line x1="28" y1="22" x2="28" y2="38" stroke="#00e5ff" stroke-width="2" stroke-linecap="round"/>
+          <rect x="10" y="46" width="36" height="4" rx="2" fill="#00e5ff" opacity="0.3"/>
+        </svg>
+      </div>
+      <div class="drop-title">Drop PDF files here</div>
+      <div class="drop-sub">
+        or <strong>click to browse</strong> — supports vector &amp; scanned PDFs<br>
+        <span style="font-family:'Space Mono',monospace;font-size:11px;opacity:0.6">Free: 3 files/day · 10MB max &nbsp;|&nbsp; Pro: unlimited · 100MB</span>
+      </div>
+      <input type="file" id="fileInput" accept=".pdf" multiple>
+    </div>
+
+    <!-- File Queue -->
+    <div class="file-queue" id="fileQueue"></div>
+
+    <!-- Options -->
+    <div class="options-row">
+      <div class="option-group">
+        <label>AutoCAD Version</label>
+        <select id="optVersion">
+          <option value="R2018">R2018 (2018+)</option>
+          <option value="R2013">R2013 (2013–2017)</option>
+          <option value="R2010" selected>R2010 (2010–2012)</option>
+          <option value="R2007">R2007 (2007–2009)</option>
+          <option value="R12">R12 (Legacy)</option>
+        </select>
+      </div>
+      <div class="option-group">
+        <label>Scale Factor</label>
+        <select id="optScale">
+          <option value="1">1:1 (as-is)</option>
+          <option value="10">1:10</option>
+          <option value="20">1:20</option>
+          <option value="50">1:50</option>
+          <option value="100">1:100</option>
+          <option value="200">1:200</option>
+          <option value="custom">Custom…</option>
+        </select>
+      </div>
+      <div class="option-group">
+        <label>Units</label>
+        <select id="optUnits">
+          <option value="mm">Millimeters (mm)</option>
+          <option value="cm">Centimeters (cm)</option>
+          <option value="m">Meters (m)</option>
+          <option value="inch">Inches</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Convert Button -->
+    <button class="btn-convert" id="btnConvert" disabled>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      Convert to DXF
+    </button>
+
+    <!-- Progress -->
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-header">
+        <span class="progress-label" id="progressLabel">Analysing PDF…</span>
+        <span class="progress-pct" id="progressPct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-status" id="progressStatus">Detecting PDF type…</div>
+    </div>
+
+    <!-- Result -->
+    <div class="result-card" id="resultCard">
+      <div class="result-title">✓ Conversion complete</div>
+      <div class="result-meta" id="resultMeta">—</div>
+      <a class="btn-download" id="btnDownload" href="#" download>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        Download DXF
+      </a>
+    </div>
+
+    <!-- Error -->
+    <div class="error-card" id="errorCard"></div>
+
+    <!-- Usage -->
+    <div class="usage-bar-wrap" id="usageWrap">
+      <span class="usage-text"><strong id="usageCount">3</strong> free conversions remaining today</span>
+      <button class="btn-pro" onclick="scrollToPricing()">Upgrade Pro →</button>
+    </div>
+
+  </div><!-- /upload-card -->
+
+  <!-- AdSense slot -->
+  <div class="ad-slot" id="adSlot">
+    <!-- Replace with: <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXXXX" data-ad-slot="XXXXXXXX" data-ad-format="auto"></ins> -->
+    Ad · 728×90
+  </div>
+
+  <!-- Features -->
+  <section class="features" id="features">
+    <div class="section-label">Why it's different</div>
+    <div class="section-title">What engineers actually need</div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">⬡</div>
+        <div class="feature-title">Layer Preservation</div>
+        <div class="feature-desc">AutoCAD layers from source PDF are mapped to DXF layers — not merged into Layer 0.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">╱</div>
+        <div class="feature-title">True Vector Lines</div>
+        <div class="feature-desc">Lines, arcs, polylines and circles are extracted as entities — not as a flat image.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">T</div>
+        <div class="feature-title">Editable Text</div>
+        <div class="feature-desc">Dimension values, notes and labels become DXF TEXT/MTEXT — fully selectable in AutoCAD.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⊟</div>
+        <div class="feature-title">Lineweight Mapping</div>
+        <div class="feature-desc">0.18mm / 0.25mm / 0.35mm / 0.5mm ISO lineweights preserved in the output DXF.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⊕</div>
+        <div class="feature-title">Scale Correction</div>
+        <div class="feature-desc">Set 1:50, 1:100, 1:200 at convert time — coordinates in DXF are already in real-world units.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⬚</div>
+        <div class="feature-title">Scanned PDF Support</div>
+        <div class="feature-desc">Raster-to-vector engine for scanned drawings. Line detection + OCR for dimension text.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Comparison -->
+  <section class="compare" id="compare">
+    <div class="section-label">Honest comparison</div>
+    <div class="section-title">vs the alternatives</div>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th class="our-header">pdf2dxf.io</th>
+          <th>CloudConvert</th>
+          <th>Zamzar</th>
+          <th>AutoDWG</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Vector line extraction</td>
+          <td class="our-col"><span class="check">✓</span></td>
+          <td><span class="partial">~</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td>Layer preservation</td>
+          <td class="our-col"><span class="check">✓</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="check">✓</span></td>
+        </tr>
+        <tr>
+          <td>Editable text</td>
+          <td class="our-col"><span class="check">✓</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="partial">~</span></td>
+        </tr>
+        <tr>
+          <td>DXF online (no install)</td>
+          <td class="our-col"><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="check">✓</span></td>
+          <td><span class="cross">✗</span></td>
+        </tr>
+        <tr>
+          <td>Scanned PDF support</td>
+          <td class="our-col"><span class="check">✓</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="partial">~</span></td>
+        </tr>
+        <tr>
+          <td>Scale factor control</td>
+          <td class="our-col"><span class="check">✓</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+          <td><span class="cross">✗</span></td>
+        </tr>
+        <tr>
+          <td>Free tier</td>
+          <td class="our-col">3/day</td>
+          <td>25/day</td>
+          <td>2/day</td>
+          <td>30-day trial</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Pricing -->
+  <section class="pricing" id="pricing">
+    <div class="section-label" style="text-align:center">Pricing</div>
+    <div class="section-title" style="text-align:center">Simple. No surprises.</div>
+    <div class="pricing-grid">
+      <div class="plan-card">
+        <div class="plan-name">Free</div>
+        <div class="plan-price">$0</div>
+        <div class="plan-desc">For occasional use</div>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> 3 files per day</li>
+          <li><span class="check">✓</span> Up to 10MB per file</li>
+          <li><span class="check">✓</span> Vector PDF support</li>
+          <li><span class="check">✓</span> DXF R2010–R2018</li>
+          <li><span class="cross">✗</span> <span style="opacity:.4">Scanned PDF (OCR)</span></li>
+          <li><span class="cross">✗</span> <span style="opacity:.4">Batch processing</span></li>
+        </ul>
+        <button class="btn-plan btn-plan-free">Start Free</button>
+      </div>
+      <div class="plan-card featured">
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">$9<span>/mo</span></div>
+        <div class="plan-desc">For daily CAD work</div>
+        <ul class="plan-features">
+          <li><span class="check">✓</span> Unlimited files</li>
+          <li><span class="check">✓</span> Up to 100MB per file</li>
+          <li><span class="check">✓</span> Scanned PDF (OCR)</li>
+          <li><span class="check">✓</span> Batch: up to 20 at once</li>
+          <li><span class="check">✓</span> Layer control panel</li>
+          <li><span class="check">✓</span> Priority processing</li>
+        </ul>
+        <button class="btn-plan btn-plan-pro" id="btnUpgrade">Upgrade to Pro →</button>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div style="margin-bottom:16px">
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">Contact</a>
+    </div>
+    © 2025 pdf2dxf.io — Built for engineers
+  </footer>
+
+</div><!-- /container -->
+
+<script>
+// ─── State ───────────────────────────────────────────────
+const API_BASE = 'http://localhost:8000'; // Replace with Railway URL in production
+let files = [];
+let usageRemaining = parseInt(localStorage.getItem('usage_remaining') ?? '3');
+let usageDate = localStorage.getItem('usage_date') ?? '';
+
+// Reset usage daily
+const today = new Date().toISOString().slice(0,10);
+if (usageDate !== today) {
+  usageRemaining = 3;
+  localStorage.setItem('usage_remaining', '3');
+  localStorage.setItem('usage_date', today);
+}
+updateUsageUI();
+
+// ─── Drop zone ───────────────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  handleFiles([...e.dataTransfer.files]);
+});
+fileInput.addEventListener('change', () => handleFiles([...fileInput.files]));
+
+function handleFiles(newFiles) {
+  const pdfs = newFiles.filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf'));
+  if (!pdfs.length) return;
+  files = [...files, ...pdfs].slice(0, 5);
+  renderQueue();
+  document.getElementById('btnConvert').disabled = false;
+  hideResultError();
+}
+
+function renderQueue() {
+  const queue = document.getElementById('fileQueue');
+  if (!files.length) { queue.style.display = 'none'; return; }
+  queue.style.display = 'block';
+  queue.innerHTML = files.map((f, i) => `
+    <div class="file-item" id="file-${i}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5a5a78" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span class="file-name">${f.name}</span>
+      <span class="file-size">${(f.size/1024/1024).toFixed(1)}MB</span>
+      <span class="file-remove" onclick="removeFile(${i})">×</span>
+    </div>`).join('');
+}
+
+function removeFile(i) {
+  files.splice(i, 1);
+  renderQueue();
+  if (!files.length) document.getElementById('btnConvert').disabled = true;
+}
+
+// ─── Convert ─────────────────────────────────────────────
+document.getElementById('btnConvert').addEventListener('click', startConvert);
+
+async function startConvert() {
+  if (!files.length) return;
+  if (usageRemaining <= 0) { scrollToPricing(); return; }
+
+  const btn = document.getElementById('btnConvert');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Converting…';
+  hideResultError();
+  showProgress();
+
+  const formData = new FormData();
+  files.forEach(f => formData.append('files', f));
+  formData.append('version', document.getElementById('optVersion').value);
+  formData.append('scale', document.getElementById('optScale').value);
+  formData.append('units', document.getElementById('optUnits').value);
+
+  try {
+    setProgress(10, 'Uploading file…');
+
+    const uploadRes = await fetch(`${API_BASE}/convert`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!uploadRes.ok) {
+      const err = await uploadRes.json();
+      throw new Error(err.detail || 'Upload failed');
+    }
+
+    const { job_id } = await uploadRes.json();
+    setProgress(30, 'Analysing PDF structure…');
+
+    // Poll status
+    await pollStatus(job_id);
+
+  } catch (err) {
+    showError(err.message);
+    resetBtn();
+  }
+}
+
+async function pollStatus(jobId) {
+  const statuses = [
+    [40, 'Detecting vector paths…'],
+    [55, 'Extracting lines and arcs…'],
+    [70, 'Mapping layers…'],
+    [82, 'Writing DXF entities…'],
+    [90, 'Finalising output file…'],
+  ];
+  let statusIdx = 0;
+
+  return new Promise((resolve, reject) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/status/${jobId}`);
+        const data = await res.json();
+
+        if (statusIdx < statuses.length) {
+          const [pct, label] = statuses[statusIdx++];
+          setProgress(pct, label);
+        }
+
+        if (data.status === 'done') {
+          clearInterval(interval);
+          setProgress(100, 'Done!');
+
+          // Decrement usage
+          usageRemaining = Math.max(0, usageRemaining - 1);
+          localStorage.setItem('usage_remaining', usageRemaining);
+          updateUsageUI();
+
+          setTimeout(() => {
+            showResult(data);
+            resetBtn();
+          }, 400);
+          resolve();
+        } else if (data.status === 'error') {
+          clearInterval(interval);
+          throw new Error(data.message || 'Conversion failed');
+        }
+      } catch (e) {
+        clearInterval(interval);
+        showError(e.message);
+        resetBtn();
+        reject(e);
+      }
+    }, 1500);
+  });
+}
+
+// ─── Progress ─────────────────────────────────────────────
+function showProgress() {
+  document.getElementById('progressWrap').style.display = 'block';
+  setProgress(0, 'Starting…');
+}
+function setProgress(pct, label) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressPct').textContent = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+}
+function hideProgress() { document.getElementById('progressWrap').style.display = 'none'; }
+
+// ─── Result / Error ───────────────────────────────────────
+function showResult(data) {
+  hideProgress();
+  const card = document.getElementById('resultCard');
+  card.style.display = 'block';
+  document.getElementById('resultMeta').textContent = `${data.filename} · ${data.entities} entities · ${data.layers} layers`;
+  const link = document.getElementById('btnDownload');
+  link.href = `${API_BASE}/download/${data.job_id}`;
+  link.download = data.filename;
+}
+
+function showError(msg) {
+  hideProgress();
+  const card = document.getElementById('errorCard');
+  card.style.display = 'block';
+  card.textContent = '⚠ ' + msg;
+}
+
+function hideResultError() {
+  document.getElementById('resultCard').style.display = 'none';
+  document.getElementById('errorCard').style.display = 'none';
+  hideProgress();
+}
+
+function resetBtn() {
+  const btn = document.getElementById('btnConvert');
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg> Convert to DXF';
+}
+
+// ─── Usage ────────────────────────────────────────────────
+function updateUsageUI() {
+  document.getElementById('usageCount').textContent = usageRemaining;
+  document.getElementById('usageWrap').style.display = usageRemaining <= 2 ? 'flex' : 'none';
+}
+
+function scrollToPricing() {
+  document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Stripe checkout placeholder
+document.getElementById('btnUpgrade').addEventListener('click', async () => {
+  // Replace with: window.location.href = await fetch('/create-checkout').then(r=>r.json()).then(d=>d.url)
+  alert('Stripe checkout — configure STRIPE_SECRET_KEY in backend to activate.');
+});
+</script>
+</body>
+</html>
