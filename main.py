@@ -2,7 +2,9 @@
 PDF to DXF Converter — FastAPI Backend
 Stack: FastAPI + Celery + Redis + pdfminer.six + ezdxf
 """
-import os, uuid, shutil, time, math
+import os
+import uuid
+import time
 from pathlib import Path
 from typing import Optional
 from datetime import datetime, date
@@ -16,19 +18,12 @@ from worker import celery_app, convert_task
 from database import init_db, get_usage, increment_usage, is_pro_user
 
 # ── Config ────────────────────────────────────────────────
-import os
-from pathlib import Path
-
-# Lấy từ biến môi trường, fallback sang /data/uploads và /data/output
+# Use environment variables with sensible defaults for local dev
 UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", "/data/uploads"))
 OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", "/data/output"))
-
-# Tạo thư mục nếu chưa tồn tại
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-MAX_FREE_MB = 10
-MAX_PRO_MB  = 100
-FREE_DAILY  = 3
+MAX_FREE_MB = int(os.environ.get("MAX_FREE_MB", 10))
+MAX_PRO_MB = int(os.environ.get("MAX_PRO_MB", 100))
+FREE_DAILY = int(os.environ.get("FREE_DAILY", 3))
 
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -123,7 +118,9 @@ async def convert(
                 413,
                 detail=f"'{f.filename}' is {size_mb:.1f}MB. Limit is {max_mb}MB ({'Pro' if is_pro else 'Free'})."
             )
-        file_path = UPLOAD_DIR / f"{job_id}_{f.filename}"
+        # sanitize filename: keep basename only
+        safe_name = Path(f.filename).name
+        file_path = UPLOAD_DIR / f"{job_id}_{safe_name}"
         file_path.write_bytes(content)
         saved_paths.append(str(file_path))
 
@@ -151,7 +148,7 @@ def status(job_id: str):
         info = result.info or {}
         return {"status": "processing", "progress": info.get("progress", 0), "step": info.get("step", "")}
     elif state == "SUCCESS":
-        data = result.result
+        data = result.result or {}
         return {
             "status": "done",
             "job_id": job_id,
@@ -176,10 +173,13 @@ def download(job_id: str):
     if not matches:
         raise HTTPException(404, "File not found or expired")
 
+    file_path = matches[0]
+    # Return file with original filename (strip job_id prefix)
+    original_name = file_path.name.split("_", 1)[1] if "_" in file_path.name else file_path.name
     return FileResponse(
-        path=str(matches[0]),
+        path=str(file_path),
         media_type="application/dxf",
-        filename=matches[0].name.split("_", 1)[1],  # strip job_id prefix
+        filename=original_name,
     )
 
 
@@ -240,6 +240,9 @@ def cleanup():
     for d in [UPLOAD_DIR, OUTPUT_DIR]:
         for f in d.iterdir():
             if f.is_file() and (now - f.stat().st_mtime) > 7200:
-                f.unlink()
-                removed += 1
+                try:
+                    f.unlink()
+                    removed += 1
+                except Exception:
+                    pass
     return {"removed": removed}
