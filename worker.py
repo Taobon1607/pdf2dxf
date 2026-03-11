@@ -19,8 +19,19 @@ celery_app.conf.update(
     task_acks_late=True,
 )
 
-OUTPUT_DIR = Path("tmp/outputs")
+from pathlib import Path
+import os
+
+OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", "/data/output"))
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+def save_converted_file(job_id, content_bytes, original_name):
+    filename = f"{job_id}_{original_name}.dxf"
+    path = OUTPUT_DIR / filename
+    with open(path, "wb") as f:
+        f.write(content_bytes)
+    print(f"Saved file to {path} size={path.stat().st_size}")
+    return filename
 
 # ── DXF version map ───────────────────────────────────────
 VERSION_MAP = {
