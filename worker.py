@@ -4,9 +4,8 @@ from pathlib import Path
 from celery import Celery, current_task
 
 # Celery config — adapt broker/backend from env
-CELERY_BROKER = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/0")
-CELERY_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
-
+CELERY_BROKER = os.environ.get("CELERY_BROKER_URL", os.environ.get("REDIS_URL", "redis://localhost:6379/0"))
+CELERY_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", CELERY_BROKER)
 celery_app = Celery("worker", broker=CELERY_BROKER, backend=CELERY_BACKEND)
 celery_app.conf.task_track_started = True
 
