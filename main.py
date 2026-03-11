@@ -16,8 +16,16 @@ from worker import celery_app, convert_task
 from database import init_db, get_usage, increment_usage, is_pro_user
 
 # ── Config ────────────────────────────────────────────────
-UPLOAD_DIR  = Path("tmp/uploads")
-OUTPUT_DIR  = Path("tmp/outputs")
+from pathlib import Path
+import os
+
+# Lấy từ biến môi trường, fallback sang /data/uploads và /data/output
+UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", "/data/uploads"))
+OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", "/data/output"))
+
+# Tạo thư mục nếu chưa tồn tại
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 MAX_FREE_MB = 10
 MAX_PRO_MB  = 100
 FREE_DAILY  = 3
