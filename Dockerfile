@@ -18,4 +18,4 @@ RUN mkdir -p tmp/uploads tmp/outputs data
 
 # Default: run web server
 # Override CMD in Railway to start Celery worker separately
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "${PORT}"]
