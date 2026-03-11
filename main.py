@@ -11,14 +11,13 @@ from datetime import datetime, date
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Request, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from celery.result import AsyncResult
 
 from worker import celery_app, convert_task
 from database import init_db, get_usage, increment_usage, is_pro_user
 
 # ── Config ────────────────────────────────────────────────
-# Use environment variables with sensible defaults for local dev
 UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", "/data/uploads"))
 OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", "/data/output"))
 MAX_FREE_MB = int(os.environ.get("MAX_FREE_MB", 10))
@@ -42,15 +41,12 @@ app.add_middleware(
 async def startup():
     init_db()
 
-
 # ── Helpers ───────────────────────────────────────────────
 def get_client_ip(request: Request) -> str:
     forwarded = request.headers.get("X-Forwarded-For")
     return forwarded.split(",")[0].strip() if forwarded else request.client.host
 
-
 def check_rate_limit(ip: str, is_pro: bool) -> int:
-    """Returns remaining conversions. Raises 429 if exceeded."""
     if is_pro:
         return 999
     used = get_usage(ip, str(date.today()))
@@ -62,13 +58,10 @@ def check_rate_limit(ip: str, is_pro: bool) -> int:
         )
     return remaining
 
-
 # ── Routes ───────────────────────────────────────────────
-
 @app.get("/health")
 def health():
     return {"status": "ok", "time": datetime.utcnow().isoformat()}
-
 
 @app.post("/convert")
 async def convert(
@@ -82,7 +75,6 @@ async def convert(
     ip = get_client_ip(request)
     is_pro = is_pro_user(pro_key) if pro_key else False
 
-    # Validate params
     valid_versions = {"R12", "R2000", "R2004", "R2007", "R2010", "R2013", "R2018"}
     if version not in valid_versions:
         version = "R2010"
@@ -101,7 +93,6 @@ async def convert(
     max_mb = MAX_PRO_MB if is_pro else MAX_FREE_MB
     check_rate_limit(ip, is_pro)
 
-    # Accept only first file for free tier (batch for pro)
     if not is_pro:
         files = files[:1]
 
@@ -118,24 +109,20 @@ async def convert(
                 413,
                 detail=f"'{f.filename}' is {size_mb:.1f}MB. Limit is {max_mb}MB ({'Pro' if is_pro else 'Free'})."
             )
-        # sanitize filename: keep basename only
         safe_name = Path(f.filename).name
         file_path = UPLOAD_DIR / f"{job_id}_{safe_name}"
         file_path.write_bytes(content)
         saved_paths.append(str(file_path))
 
-    # Queue conversion task
     convert_task.apply_async(
         args=[job_id, saved_paths, version, scale_f, units],
         task_id=job_id
     )
 
-    # Increment usage
     if not is_pro:
         increment_usage(ip, str(date.today()))
 
     return {"job_id": job_id, "files": len(saved_paths)}
-
 
 @app.get("/status/{job_id}")
 def status(job_id: str):
@@ -161,20 +148,16 @@ def status(job_id: str):
     else:
         return {"status": state.lower()}
 
-
 @app.get("/download/{job_id}")
 def download(job_id: str):
-    # Security: only allow safe characters in job_id
     if not all(c in "0123456789abcdef-" for c in job_id):
         raise HTTPException(400, "Invalid job ID")
 
-    # Find output file
     matches = list(OUTPUT_DIR.glob(f"{job_id}_*.dxf"))
     if not matches:
         raise HTTPException(404, "File not found or expired")
 
     file_path = matches[0]
-    # Return file with original filename (strip job_id prefix)
     original_name = file_path.name.split("_", 1)[1] if "_" in file_path.name else file_path.name
     return FileResponse(
         path=str(file_path),
@@ -182,10 +165,8 @@ def download(job_id: str):
         filename=original_name,
     )
 
-
 @app.post("/create-checkout")
 async def create_checkout():
-    """Stripe checkout session. Fill in STRIPE_SECRET_KEY in env."""
     import stripe
     stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
     if not stripe.api_key:
@@ -208,7 +189,6 @@ async def create_checkout():
     )
     return {"url": session.url}
 
-
 @app.post("/webhook/stripe")
 async def stripe_webhook(request: Request):
     import stripe
@@ -223,18 +203,14 @@ async def stripe_webhook(request: Request):
         raise HTTPException(400, "Invalid signature")
 
     if event["type"] == "customer.subscription.deleted":
-        # Handle cancellation — revoke pro access
         customer_id = event["data"]["object"]["customer"]
         # TODO: update database to mark user as free
         pass
 
     return {"received": True}
 
-
-# ── Cleanup old files (run as scheduled Celery beat task) ─
 @app.delete("/internal/cleanup")
 def cleanup():
-    """Remove files older than 2 hours."""
     now = time.time()
     removed = 0
     for d in [UPLOAD_DIR, OUTPUT_DIR]:
@@ -246,3 +222,9 @@ def cleanup():
                 except Exception:
                     pass
     return {"removed": removed}
+
+# ── Entrypoint ────────────────────────────────────────────
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
