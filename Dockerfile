@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.11
 
 # System deps for OpenCV + Tesseract
 RUN apt-get update && apt-get install -y \
