@@ -19,7 +19,15 @@ celery_app.conf.update(
     task_acks_late=True,
 )
 
-OUTPUT_DIR = Path("tmp/outputs")
+import os
+from pathlib import Path
+
+# Lấy từ biến môi trường, fallback sang /data/uploads và /data/output
+UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", "/data/uploads"))
+OUTPUT_DIR = Path(os.environ.get("OUTPUT_DIR", "/data/output"))
+
+# Tạo thư mục nếu chưa tồn tại
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── DXF version map ───────────────────────────────────────
