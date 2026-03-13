@@ -904,9 +904,7 @@
 <script>
 // ─── State ───────────────────────────────────────────────
 const RAILWAY_URL = 'https://web-production-f7ee7.up.railway.app'; // Railway backend URL
-const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'http://localhost:8000'
-  : RAILWAY_URL;
+const API_BASE = 'https://xxx.up.railway.app'; // URL từ Railway
 let files = [];
 let usageRemaining = 999;
 updateUsageUI();
