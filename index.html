@@ -656,6 +656,16 @@
     <div class="file-queue" id="fileQueue"></div>
 
     <!-- Options -->
+    <div style="display:flex;gap:16px;margin-top:16px;flex-wrap:wrap;">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);cursor:pointer;font-family:Space Mono,monospace;">
+        <input type="checkbox" id="optIncludeText" style="accent-color:var(--accent);width:14px;height:14px;">
+        Include text layer
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);cursor:pointer;font-family:Space Mono,monospace;">
+        <input type="checkbox" id="optIncludeHatch" checked style="accent-color:var(--accent);width:14px;height:14px;">
+        Include hatch/fill
+      </label>
+    </div>
     <div class="options-row">
       <div class="option-group">
         <label>AutoCAD Version</label>
@@ -669,15 +679,20 @@
       </div>
       <div class="option-group">
         <label>Scale Factor</label>
-        <select id="optScale">
+        <select id="optScale" onchange="toggleCustomScale(this.value)">
           <option value="1">1:1 (as-is)</option>
           <option value="10">1:10</option>
           <option value="20">1:20</option>
           <option value="50">1:50</option>
           <option value="100">1:100</option>
           <option value="200">1:200</option>
+          <option value="500">1:500</option>
+          <option value="1000">1:1000</option>
           <option value="custom">Custom…</option>
         </select>
+        <input type="number" id="customScale" placeholder="e.g. 100" min="0.001" step="any"
+               style="display:none;margin-top:6px;width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:Syne,sans-serif;font-size:13px;">
+        <div id="scaleHint" style="font-size:11px;margin-top:6px;font-family:Space Mono,monospace;color:var(--muted);"></div>
       </div>
       <div class="option-group">
         <label>Units</label>
@@ -888,18 +903,12 @@
 
 <script>
 // ─── State ───────────────────────────────────────────────
-const API_BASE = 'https://web-production-f7ee7.up.railway.app'; // Replace with Railway URL in production
+const RAILWAY_URL = 'https://web-production-f7ee7.up.railway.app'; // Railway backend URL
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:8000'
+  : RAILWAY_URL;
 let files = [];
-let usageRemaining = parseInt(localStorage.getItem('usage_remaining') ?? '3');
-let usageDate = localStorage.getItem('usage_date') ?? '';
-
-// Reset usage daily
-const today = new Date().toISOString().slice(0,10);
-if (usageDate !== today) {
-  usageRemaining = 3;
-  localStorage.setItem('usage_remaining', '3');
-  localStorage.setItem('usage_date', today);
-}
+let usageRemaining = 999;
 updateUsageUI();
 
 // ─── Drop zone ───────────────────────────────────────────
@@ -923,6 +932,36 @@ function handleFiles(newFiles) {
   renderQueue();
   document.getElementById('btnConvert').disabled = false;
   hideResultError();
+  autoDetectScale(files[0]);
+}
+
+async function autoDetectScale(file) {
+  const scaleHint = document.getElementById('scaleHint');
+  if (scaleHint) scaleHint.textContent = '⏳ Detecting scale...';
+  try {
+    const fd = new FormData();
+    fd.append('files', file);
+    const res = await fetch(API_BASE + '/detect-scale', { method: 'POST', body: fd });
+    if (!res.ok) throw new Error('detect failed');
+    const data = await res.json();
+    if (data.detected) {
+      window._detectedScale = data.scale;
+      const customInput = document.getElementById('customScale');
+      if (customInput) { customInput.value = data.scale; customInput.style.display = 'block'; }
+      const scaleEl = document.getElementById('optScale');
+      if (scaleEl) scaleEl.value = 'custom';
+      if (scaleHint) {
+        scaleHint.textContent = 'Auto-detected: ' + data.label + ' (' + data.confidence + ' confidence)';
+        scaleHint.style.color = data.confidence === 'high' ? 'var(--success)' : 'var(--accent2)';
+      }
+    } else {
+      window._detectedScale = null;
+      if (scaleHint) scaleHint.textContent = 'Could not detect scale - using 1:1';
+    }
+  } catch(e) {
+    window._detectedScale = null;
+    if (scaleHint) scaleHint.textContent = '';
+  }
 }
 
 function renderQueue() {
@@ -957,11 +996,20 @@ async function startConvert() {
   hideResultError();
   showProgress();
 
+  // Get scale value — priority: detected > custom input > select
+  let scaleValue = document.getElementById('optScale').value;
+  if (scaleValue === 'custom') {
+    const customVal = document.getElementById('customScale').value;
+    scaleValue = customVal || (window._detectedScale ? window._detectedScale : '1');
+  }
+
   const formData = new FormData();
   files.forEach(f => formData.append('files', f));
   formData.append('version', document.getElementById('optVersion').value);
-  formData.append('scale', document.getElementById('optScale').value);
+  formData.append('scale', scaleValue);
   formData.append('units', document.getElementById('optUnits').value);
+  formData.append('include_text', document.getElementById('optIncludeText').checked ? '1' : '0');
+  formData.append('include_hatch', document.getElementById('optIncludeHatch').checked ? '1' : '0');
 
   try {
     setProgress(10, 'Uploading file…');
@@ -1013,10 +1061,7 @@ async function pollStatus(jobId) {
           clearInterval(interval);
           setProgress(100, 'Done!');
 
-          // Decrement usage
-          usageRemaining = Math.max(0, usageRemaining - 1);
-          localStorage.setItem('usage_remaining', usageRemaining);
-          updateUsageUI();
+          // Local mode: no usage decrement
 
           setTimeout(() => {
             showResult(data);
@@ -1081,12 +1126,22 @@ function resetBtn() {
 
 // ─── Usage ────────────────────────────────────────────────
 function updateUsageUI() {
-  document.getElementById('usageCount').textContent = usageRemaining;
-  document.getElementById('usageWrap').style.display = usageRemaining <= 2 ? 'flex' : 'none';
+  document.getElementById('usageWrap').style.display = 'none';
 }
 
 function scrollToPricing() {
   document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
+}
+
+function toggleCustomScale(val) {
+  const inp = document.getElementById('customScale');
+  if (val === 'custom') {
+    inp.style.display = 'block';
+    inp.focus();
+  } else {
+    inp.style.display = 'none';
+    window._detectedScale = null;
+  }
 }
 
 // Stripe checkout placeholder
