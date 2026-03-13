@@ -12,16 +12,16 @@
 
 <style>
   :root {
-    --bg:        #0a0a0f;
-    --surface:   #13131a;
-    --border:    #1e1e2e;
+    --bg:        #0d0d14;
+    --surface:   #16161f;
+    --border:    #2a2a3e;
     --accent:    #00e5ff;
     --accent2:   #ff6b35;
-    --text:      #e8e8f0;
-    --muted:     #5a5a78;
+    --text:      #f0f0f8;
+    --muted:     #9090b0;
     --success:   #00ff9d;
     --error:     #ff4060;
-    --grid:      rgba(0,229,255,0.03);
+    --grid:      rgba(0,229,255,0.04);
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -903,8 +903,10 @@
 
 <script>
 // ─── State ───────────────────────────────────────────────
-const RAILWAY_URL = 'https://web-production-f7ee7.up.railway.app'; // Railway backend URL
-const API_BASE = 'https://xxx.up.railway.app'; // URL từ Railway
+const RAILWAY_URL = 'https://web-production-f7ee7.up.railway.app';
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:8000'
+  : RAILWAY_URL;
 let files = [];
 let usageRemaining = 999;
 updateUsageUI();
