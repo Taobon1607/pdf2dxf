@@ -1,4 +1,83 @@
-# pdf2dxf.io — Deploy Guide
+# pdf2dxf — Deploy Guide
+
+## Stack hiện tại
+- **Backend**: FastAPI + PyMuPDF + ezdxf (single process, không cần Redis/Celery)
+- **Frontend**: index.html (static)
+- **Deploy**: Railway (backend) + GitHub Pages (frontend)
+
+---
+
+## Bước 1 — Push lên GitHub
+
+```bash
+cd C:\Users\Admin\Desktop\AI\pdf2dxf
+
+# Nếu chưa có git:
+git init
+git add .
+git commit -m "working converter"
+git remote add origin https://github.com/Taobon1607/pdf2dxf
+git push -u origin master
+
+# Nếu đã có git (update):
+git add .
+git commit -m "update converter"
+git push
+```
+
+---
+
+## Bước 2 — Deploy Backend lên Railway
+
+1. Vào https://railway.app → Login với GitHub
+2. **New Project** → **Deploy from GitHub repo** → chọn `pdf2dxf`
+3. Railway sẽ detect Dockerfile tự động
+4. **Settings → Root Directory**: đặt là `backend`
+5. Đợi build xong → copy URL dạng `https://xxx.up.railway.app`
+
+---
+
+## Bước 3 — Update API_BASE trong index.html
+
+Mở `index.html`, tìm dòng 906:
+```javascript
+const API_BASE = 'http://localhost:8000';
+```
+Đổi thành:
+```javascript
+const API_BASE = 'https://xxx.up.railway.app'; // URL từ Railway
+```
+
+---
+
+## Bước 4 — Deploy Frontend lên GitHub Pages
+
+1. Commit index.html đã update lên GitHub
+2. GitHub repo → **Settings** → **Pages**
+3. Source: **Deploy from branch** → branch `master` → folder `/` (root)
+4. Save → đợi ~2 phút → URL: `https://taobon1607.github.io/pdf2dxf`
+
+---
+
+## Test
+
+```
+https://taobon1607.github.io/pdf2dxf
+```
+Upload PDF → Convert → Download DXF
+
+---
+
+## Cấu trúc repo
+
+```
+pdf2dxf/
+├── index.html                    ← Frontend
+└── backend/
+    ├── main_local_pymupdf.py     ← FastAPI app (file chính)
+    ├── requirements.txt          ← fastapi, uvicorn, pymupdf, ezdxf
+    └── Dockerfile                ← Railway build
+```
 
 ## Cấu trúc dự án
 
