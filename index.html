@@ -736,8 +736,17 @@
 
     <!-- Usage -->
     <div class="usage-bar-wrap" id="usageWrap">
-      <span class="usage-text"><strong id="usageCount">3</strong> free conversions remaining today</span>
+      <span class="usage-text" id="usageText"><strong id="usageCount">5</strong> free conversions remaining today</span>
       <button class="btn-pro" onclick="scrollToPricing()">Upgrade Pro →</button>
+    </div>
+
+    <!-- Pro Key input -->
+    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+      <input type="text" id="proKeyInput" placeholder="Pro key (optional)"
+        style="flex:1;background:#1a1a2e;border:1px solid var(--border);color:var(--text);
+               padding:8px 12px;border-radius:6px;font-family:'Space Mono',monospace;font-size:12px;"
+        oninput="onProKeyChange(this.value)">
+      <span id="proKeyStatus" style="font-size:11px;color:var(--muted)"></span>
     </div>
 
   </div><!-- /upload-card -->
@@ -908,7 +917,60 @@ const API_BASE = (window.location.hostname === 'localhost' || window.location.ho
   ? 'http://localhost:8000'
   : RAILWAY_URL;
 let files = [];
-let usageRemaining = 999;
+let usageRemaining = 5;
+let isPro = false;
+let proKey = '';
+
+// Load usage on page start
+async function loadUsage() {
+  try {
+    const pk = localStorage.getItem('proKey') || '';
+    if (pk) { document.getElementById('proKeyInput').value = pk; proKey = pk; }
+    const url = pk ? `${API_BASE}/usage?pro_key=${encodeURIComponent(pk)}` : `${API_BASE}/usage`;
+    const res = await fetch(url);
+    const data = await res.json();
+    updateUsageUI(data);
+  } catch(e) {}
+}
+
+function updateUsageUI(data) {
+  isPro = data.is_pro || false;
+  usageRemaining = data.remaining ?? 5;
+  const countEl = document.getElementById('usageCount');
+  const textEl = document.getElementById('usageText');
+  const wrapEl = document.getElementById('usageWrap');
+  if (isPro) {
+    textEl.innerHTML = '✓ <strong>Pro</strong> — unlimited conversions';
+    wrapEl.querySelector('.btn-pro').style.display = 'none';
+    document.getElementById('proKeyStatus').textContent = '✓ Active';
+    document.getElementById('proKeyStatus').style.color = 'var(--success)';
+  } else {
+    countEl.textContent = usageRemaining;
+    textEl.innerHTML = `<strong id="usageCount">${usageRemaining}</strong> free conversions remaining today`;
+    wrapEl.querySelector('.btn-pro').style.display = '';
+  }
+}
+
+async function onProKeyChange(val) {
+  proKey = val.trim();
+  localStorage.setItem('proKey', proKey);
+  if (!proKey) {
+    document.getElementById('proKeyStatus').textContent = '';
+    loadUsage();
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/usage?pro_key=${encodeURIComponent(proKey)}`);
+    const data = await res.json();
+    updateUsageUI(data);
+    if (!data.is_pro) {
+      document.getElementById('proKeyStatus').textContent = '✗ Invalid key';
+      document.getElementById('proKeyStatus').style.color = 'var(--error)';
+    }
+  } catch(e) {}
+}
+
+loadUsage();
 updateUsageUI();
 
 // ─── Drop zone ───────────────────────────────────────────
@@ -1010,6 +1072,7 @@ async function startConvert() {
   formData.append('units', document.getElementById('optUnits').value);
   formData.append('include_text', document.getElementById('optIncludeText').checked ? '1' : '0');
   formData.append('include_hatch', document.getElementById('optIncludeHatch').checked ? '1' : '0');
+  formData.append('pro_key', proKey || '');
 
   try {
     setProgress(10, 'Uploading file…');
@@ -1024,7 +1087,14 @@ async function startConvert() {
       throw new Error(err.detail || 'Upload failed');
     }
 
-    const { job_id } = await uploadRes.json();
+    const uploadData = await uploadRes.json();
+    const { job_id } = uploadData;
+    // Update remaining count after successful convert
+    if (!isPro && uploadData.remaining !== undefined) {
+      usageRemaining = uploadData.remaining;
+      const countEl = document.getElementById('usageCount');
+      if (countEl) countEl.textContent = usageRemaining;
+    }
     setProgress(30, 'Analysing PDF structure…');
 
     // Poll status
