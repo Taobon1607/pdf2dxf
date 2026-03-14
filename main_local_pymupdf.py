@@ -228,11 +228,11 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                     x = _mw - py
                     y = _mh - px
                 elif _rot == 270:
-                    x = _mh - py
-                    y = _mw - px
+                    x = py
+                    y = px
                 elif _rot == 180:
                     x = _mw - px
-                    y = _mh - py
+                    y = py
                 else:
                     x = px
                     y = _mh - py
@@ -327,10 +327,12 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                         pass  # handled below
 
                     elif itype == "qu":
+                        # Quad object: dùng index [0..3] thay vì .x/.y
                         quad = item[1]
                         try:
                             pts = [to_dxf(quad[i].x, quad[i].y) for i in range(4)]
                         except (AttributeError, TypeError):
+                            # Fallback: item[1..4] là Points trực tiếp
                             pts = [to_dxf(item[i].x, item[i].y) for i in range(1,5)]
                         msp.add_lwpolyline(pts, dxfattribs={"layer": layer_name, "closed": True})
                         entities += 1
@@ -364,6 +366,9 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                             _ang = __import__("math").degrees(
                                 __import__("math").atan2(_dir[1], _dir[0]))
                             _dxf_ang = (_ang + rotation) % 360
+                            # Normalize: DXF text angle >180° đọc ngược
+                            if 180 < _dxf_ang <= 360:
+                                _dxf_ang -= 180
                             for _span in _line.get("spans", []):
                                 _txt = _span.get("text","").strip()
                                 if not _txt or len(_txt) < 1: continue
