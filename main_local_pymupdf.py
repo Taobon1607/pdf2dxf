@@ -327,12 +327,10 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                         pass  # handled below
 
                     elif itype == "qu":
-                        # Quad object: dùng index [0..3] thay vì .x/.y
                         quad = item[1]
                         try:
                             pts = [to_dxf(quad[i].x, quad[i].y) for i in range(4)]
                         except (AttributeError, TypeError):
-                            # Fallback: item[1..4] là Points trực tiếp
                             pts = [to_dxf(item[i].x, item[i].y) for i in range(1,5)]
                         msp.add_lwpolyline(pts, dxfattribs={"layer": layer_name, "closed": True})
                         entities += 1
