@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pdf2dxf Admin</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', sans-serif; background: #0f0f17; color: #e0e0f0; min-height: 100vh; }
+
+.login-screen { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.login-box { background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 12px; padding: 40px; width: 360px; }
+.login-box h2 { margin-bottom: 24px; color: #00e5ff; font-size: 20px; }
+.login-box input { width: 100%; padding: 10px 14px; background: #0f0f17; border: 1px solid #2a2a3e;
+  border-radius: 8px; color: #e0e0f0; font-size: 14px; margin-bottom: 12px; }
+.login-box button { width: 100%; padding: 12px; background: #00e5ff; color: #000; border: none;
+  border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; }
+
+.dashboard { display: none; }
+.topbar { background: #1a1a2e; border-bottom: 1px solid #2a2a3e; padding: 16px 32px;
+  display: flex; align-items: center; justify-content: space-between; }
+.topbar h1 { font-size: 18px; color: #00e5ff; }
+.topbar .logout { background: none; border: 1px solid #2a2a3e; color: #9090b0; padding: 6px 14px;
+  border-radius: 6px; cursor: pointer; font-size: 13px; }
+
+.main { padding: 32px; max-width: 1100px; margin: 0 auto; }
+
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 32px; }
+.stat-card { background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 10px; padding: 20px; }
+.stat-card .label { font-size: 12px; color: #9090b0; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+.stat-card .value { font-size: 32px; font-weight: 700; color: #00e5ff; }
+.stat-card .sub { font-size: 12px; color: #9090b0; margin-top: 4px; }
+
+.section { background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 10px; padding: 24px; margin-bottom: 24px; }
+.section h2 { font-size: 15px; margin-bottom: 20px; color: #f0f0f8; }
+
+.create-form { display: flex; gap: 10px; margin-bottom: 20px; }
+.create-form input { flex: 1; padding: 10px 14px; background: #0f0f17; border: 1px solid #2a2a3e;
+  border-radius: 8px; color: #e0e0f0; font-size: 13px; }
+.create-form button { padding: 10px 20px; background: #00e5ff; color: #000; border: none;
+  border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; white-space: nowrap; }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { text-align: left; padding: 10px 12px; color: #9090b0; font-weight: 600;
+  border-bottom: 1px solid #2a2a3e; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+tbody tr { border-bottom: 1px solid #1e1e2e; }
+tbody tr:hover { background: #1e1e2e; }
+tbody td { padding: 12px; }
+.key-cell { font-family: monospace; font-size: 12px; color: #00e5ff; }
+.badge-active { background: rgba(0,255,157,0.15); color: #00ff9d; padding: 2px 8px;
+  border-radius: 20px; font-size: 11px; font-weight: 600; }
+.badge-revoked { background: rgba(255,64,96,0.15); color: #ff4060; padding: 2px 8px;
+  border-radius: 20px; font-size: 11px; font-weight: 600; }
+.btn-revoke { background: none; border: 1px solid #ff4060; color: #ff4060; padding: 4px 10px;
+  border-radius: 6px; font-size: 11px; cursor: pointer; }
+.btn-revoke:hover { background: rgba(255,64,96,0.1); }
+.btn-copy { background: none; border: 1px solid #2a2a3e; color: #9090b0; padding: 4px 10px;
+  border-radius: 6px; font-size: 11px; cursor: pointer; margin-right: 6px; }
+.btn-copy:hover { border-color: #00e5ff; color: #00e5ff; }
+
+.toast { position: fixed; bottom: 24px; right: 24px; background: #00ff9d; color: #000;
+  padding: 12px 20px; border-radius: 8px; font-weight: 600; font-size: 13px;
+  transform: translateY(80px); transition: transform 0.3s; z-index: 999; }
+.toast.show { transform: translateY(0); }
+
+.empty { text-align: center; padding: 40px; color: #9090b0; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <h2>🔐 Admin Login</h2>
+    <input type="password" id="secretInput" placeholder="Admin secret" onkeydown="if(event.key==='Enter')login()">
+    <button onclick="login()">Login</button>
+    <p id="loginError" style="color:#ff4060;font-size:12px;margin-top:10px"></p>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div class="dashboard" id="dashboard">
+  <div class="topbar">
+    <h1>pdf2dxf Admin</h1>
+    <button class="logout" onclick="logout()">Logout</button>
+  </div>
+
+  <div class="main">
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="label">Today's Conversions</div>
+        <div class="value" id="statToday">—</div>
+        <div class="sub">free tier usage</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">This Week</div>
+        <div class="value" id="statWeek">—</div>
+        <div class="sub">last 7 days</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Active Pro Keys</div>
+        <div class="value" id="statKeys">—</div>
+        <div class="sub">paying customers</div>
+      </div>
+    </div>
+
+    <!-- Create Key -->
+    <div class="section">
+      <h2>Create Pro Key</h2>
+      <div class="create-form">
+        <input type="email" id="newEmail" placeholder="Customer email (auto-send key)">
+        <input type="text" id="newLabel" placeholder="Label (optional)">
+        <select id="newPlan" style="padding:10px 14px;background:#0f0f17;border:1px solid #2a2a3e;color:#e0e0f0;border-radius:8px;font-size:13px">
+          <option value="monthly">Monthly (30 days)</option>
+          <option value="yearly">Yearly (1 year)</option>
+          <option value="lifetime">Lifetime</option>
+        </select>
+        <button onclick="createKey()">+ Create Key</button>
+      </div>
+      <p style="font-size:12px;color:#9090b0">If SMTP is configured, key is emailed automatically. Otherwise copy & send manually.</p>
+    </div>
+
+    <!-- Keys Table -->
+    <div class="section">
+      <h2>Pro Keys</h2>
+      <div id="keysContainer"><div class="empty">Loading...</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const RAILWAY_URL = 'https://web-production-f7ee7.up.railway.app';
+const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? 'http://localhost:8000' : RAILWAY_URL;
+
+let secret = '';
+
+async function login() {
+  secret = document.getElementById('secretInput').value.trim();
+  if (!secret) return;
+  try {
+    const res = await fetch(`${API_BASE}/admin/stats?secret=${encodeURIComponent(secret)}`);
+    if (!res.ok) { document.getElementById('loginError').textContent = 'Wrong password'; return; }
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    loadAll();
+  } catch(e) {
+    document.getElementById('loginError').textContent = 'Cannot connect to server';
+  }
+}
+
+function logout() {
+  secret = '';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('secretInput').value = '';
+}
+
+async function loadAll() {
+  await Promise.all([loadStats(), loadKeys()]);
+}
+
+async function loadStats() {
+  const res = await fetch(`${API_BASE}/admin/stats?secret=${encodeURIComponent(secret)}`);
+  const d = await res.json();
+  document.getElementById('statToday').textContent = d.today ?? 0;
+  document.getElementById('statWeek').textContent = d.week ?? 0;
+  document.getElementById('statKeys').textContent = d.active_pro_keys ?? 0;
+}
+
+async function loadKeys() {
+  const res = await fetch(`${API_BASE}/admin/list-keys?secret=${encodeURIComponent(secret)}`);
+  const d = await res.json();
+  const keys = d.keys || [];
+  const container = document.getElementById('keysContainer');
+  if (!keys.length) {
+    container.innerHTML = '<div class="empty">No keys yet. Create one above.</div>';
+    return;
+  }
+      container.innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Key</th><th>Email</th><th>Plan</th><th>Expires</th><th>Status</th><th>Actions</th>
+      </tr></thead>
+      <tbody>
+        ${keys.map(k => {
+          const expired = k.expired;
+          const statusBadge = !k.active ? '<span class="badge-revoked">Revoked</span>'
+            : expired ? '<span class="badge-revoked">Expired</span>'
+            : '<span class="badge-active">Active</span>';
+          const planLabel = {monthly:'Monthly',yearly:'Yearly',lifetime:'Lifetime'}[k.plan] || k.plan;
+          return `<tr>
+            <td class="key-cell">${k.key}</td>
+            <td style="color:#9090b0">${k.email || k.label || '—'}</td>
+            <td><span style="font-size:12px">${planLabel}</span></td>
+            <td style="color:#9090b0;font-size:12px">${k.expires_at || '∞'}</td>
+            <td>${statusBadge}</td>
+            <td>
+              <button class="btn-copy" onclick="copyKey('${k.key}')">Copy</button>
+              ${k.active && !expired ? `<button class="btn-revoke" onclick="revokeKey('${k.key}')">Revoke</button>` : ''}
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function createKey() {
+  const email = document.getElementById('newEmail').value.trim();
+  const label = document.getElementById('newLabel').value.trim();
+  const plan  = document.getElementById('newPlan').value;
+  if (!email && !label) { showToast('Enter email or label', true); return; }
+  const fd = new FormData();
+  fd.append('secret', secret);
+  fd.append('email', email);
+  fd.append('label', label);
+  fd.append('plan', plan);
+  fd.append('send_email', '1');
+  const res = await fetch(`${API_BASE}/admin/create-key`, { method: 'POST', body: fd });
+  const d = await res.json();
+  document.getElementById('newEmail').value = '';
+  document.getElementById('newLabel').value = '';
+  const emailMsg = d.email_sent ? ' (email sent ✓)' : email ? ' (copy & send manually)' : '';
+  showToast(`Key: ${d.key}${emailMsg}`);
+  loadAll();
+}
+
+async function revokeKey(key) {
+  if (!confirm(`Revoke key ${key}?`)) return;
+  const fd = new FormData();
+  fd.append('secret', secret);
+  fd.append('key', key);
+  await fetch(`${API_BASE}/admin/revoke-key`, { method: 'POST', body: fd });
+  showToast('Key revoked');
+  loadAll();
+}
+
+function copyKey(key) {
+  navigator.clipboard.writeText(key);
+  showToast('Copied to clipboard!');
+}
+
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = isError ? '#ff4060' : '#00ff9d';
+  t.style.color = isError ? '#fff' : '#000';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+document.getElementById('secretInput').focus();
+</script>
+</body>
+</html>
