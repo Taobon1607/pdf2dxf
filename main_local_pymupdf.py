@@ -31,11 +31,21 @@ def get_db():
     conn.execute("""
         CREATE TABLE IF NOT EXISTS pro_keys (
             key TEXT PRIMARY KEY,
+            email TEXT,
             label TEXT,
+            plan TEXT DEFAULT 'monthly',
             created TEXT,
+            expires_at TEXT,
             active INTEGER DEFAULT 1
         )
     """)
+    # Migration: add missing columns if upgrading from old schema
+    try: conn.execute("ALTER TABLE pro_keys ADD COLUMN email TEXT")
+    except: pass
+    try: conn.execute("ALTER TABLE pro_keys ADD COLUMN plan TEXT DEFAULT 'monthly'")
+    except: pass
+    try: conn.execute("ALTER TABLE pro_keys ADD COLUMN expires_at TEXT")
+    except: pass
     conn.commit()
     return conn
 
@@ -54,10 +64,15 @@ def check_usage(ip: str, pro_key: str = "") -> dict:
     if pro_key:
         conn = get_db()
         row = conn.execute(
-            "SELECT active FROM pro_keys WHERE key=?", (pro_key.strip(),)
+            "SELECT active, expires_at FROM pro_keys WHERE key=?", (pro_key.strip(),)
         ).fetchone()
         conn.close()
         if row and row[0] == 1:
+            # Check expiry
+            if row[1]:  # có expires_at
+                from datetime import date as _date
+                if row[1] < _date.today().isoformat():
+                    return {"allowed": False, "remaining": 0, "is_pro": False, "error": "Pro key expired. Please renew."}
             return {"allowed": True, "remaining": 999, "is_pro": True}
         else:
             return {"allowed": False, "remaining": 0, "is_pro": False, "error": "Invalid or inactive pro key"}
@@ -89,17 +104,31 @@ def increment_usage(ip: str):
     conn.commit()
     conn.close()
 
-def generate_pro_key(label: str = "") -> str:
+def generate_pro_key(email: str = "", label: str = "", plan: str = "monthly") -> dict:
+    from datetime import date, timedelta
     chars = string.ascii_uppercase + string.digits
     key = "PRO-" + "".join(secrets.choice(chars) for _ in range(20))
+    
+    # Tính expiry
+    today = date.today()
+    if plan == "yearly":
+        expires_at = (today.replace(year=today.year + 1)).isoformat()
+    elif plan == "lifetime":
+        expires_at = None  # không hết hạn
+    else:  # monthly
+        expires_at = (today + timedelta(days=30)).isoformat()
+    
+    # Revoke key cũ của cùng email (nếu có)
     conn = get_db()
+    if email:
+        conn.execute("UPDATE pro_keys SET active=0 WHERE email=? AND active=1", (email,))
     conn.execute(
-        "INSERT INTO pro_keys (key, label, created) VALUES (?, ?, ?)",
-        (key, label, datetime.utcnow().isoformat())
+        "INSERT INTO pro_keys (key, email, label, plan, created, expires_at) VALUES (?,?,?,?,?,?)",
+        (key, email, label, plan, datetime.utcnow().isoformat(), expires_at)
     )
     conn.commit()
     conn.close()
-    return key
+    return {"key": key, "email": email, "plan": plan, "expires_at": expires_at}
 
 app = FastAPI(title="PDF to DXF PyMuPDF")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -604,21 +633,94 @@ async def convert(
 
 # ── Admin endpoints ────────────────────────────────────────
 
+# Email config (set trong Railway env vars)
+SMTP_HOST = os.environ.get("SMTP_HOST", "")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USER = os.environ.get("SMTP_USER", "")
+SMTP_PASS = os.environ.get("SMTP_PASS", "")
+SMTP_FROM = os.environ.get("SMTP_FROM", "noreply@pdf2dxf.io")
+
+def send_key_email(to_email: str, key: str, plan: str, expires_at: str):
+    """Gửi email chứa pro key cho khách"""
+    if not SMTP_HOST or not SMTP_USER:
+        return False  # Email chưa config
+    try:
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        
+        plan_text = {"monthly": "1 Month", "yearly": "1 Year", "lifetime": "Lifetime"}.get(plan, plan)
+        expire_text = f"Expires: {expires_at}" if expires_at else "Never expires (Lifetime)"
+        
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Your pdf2dxf Pro Key"
+        msg["From"] = SMTP_FROM
+        msg["To"] = to_email
+        
+        body = f"""Hi,
+
+Thank you for your purchase!
+
+Your Pro Key: {key}
+Plan: {plan_text}
+{expire_text}
+
+How to use:
+1. Go to https://pdf2dxf.io (or our site URL)
+2. Enter your key in the "Pro key" field
+3. Enjoy unlimited conversions!
+
+If you have any questions, reply to this email.
+
+— pdf2dxf Team
+"""
+        msg.attach(MIMEText(body, "plain"))
+        
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASS)
+            server.sendmail(SMTP_FROM, to_email, msg.as_string())
+        return True
+    except Exception as e:
+        print(f"Email error: {e}")
+        return False
+
 @app.post("/admin/create-key")
-def create_key(secret: str = Form(...), label: str = Form(default="")):
+def create_key(
+    secret: str = Form(...),
+    email: str = Form(default=""),
+    label: str = Form(default=""),
+    plan: str = Form(default="monthly"),
+    send_email: str = Form(default="1"),
+):
     if secret != ADMIN_SECRET:
         raise HTTPException(403, "Forbidden")
-    key = generate_pro_key(label)
-    return {"key": key, "label": label}
+    result = generate_pro_key(email=email, label=label, plan=plan)
+    # Tự động gửi email nếu có email và SMTP config
+    email_sent = False
+    if email and send_email == "1":
+        email_sent = send_key_email(email, result["key"], plan, result.get("expires_at", ""))
+    return {**result, "email_sent": email_sent}
 
 @app.get("/admin/list-keys")
 def list_keys(secret: str = ""):
     if secret != ADMIN_SECRET:
         raise HTTPException(403, "Forbidden")
     conn = get_db()
-    rows = conn.execute("SELECT key, label, created, active FROM pro_keys ORDER BY created DESC").fetchall()
+    rows = conn.execute(
+        "SELECT key, email, label, plan, created, expires_at, active FROM pro_keys ORDER BY created DESC"
+    ).fetchall()
     conn.close()
-    return {"keys": [{"key": r[0], "label": r[1], "created": r[2], "active": r[3]} for r in rows]}
+    today = date.today().isoformat()
+    result = []
+    for r in rows:
+        expired = bool(r[5] and r[5] < today)
+        result.append({
+            "key": r[0], "email": r[1] or "", "label": r[2] or "",
+            "plan": r[3] or "monthly", "created": r[4],
+            "expires_at": r[5], "active": r[6], "expired": expired
+        })
+    return {"keys": result}
 
 @app.post("/admin/revoke-key")
 def revoke_key(secret: str = Form(...), key: str = Form(...)):
@@ -629,6 +731,47 @@ def revoke_key(secret: str = Form(...), key: str = Form(...)):
     conn.commit()
     conn.close()
     return {"revoked": key}
+
+@app.post("/webhook/paypal")
+async def paypal_webhook(request: Request):
+    """PayPal IPN/Webhook — tự động tạo key khi có payment"""
+    try:
+        body = await request.body()
+        data = {}
+        # Parse form data từ PayPal IPN
+        for item in body.decode().split("&"):
+            if "=" in item:
+                k, v = item.split("=", 1)
+                from urllib.parse import unquote_plus
+                data[unquote_plus(k)] = unquote_plus(v)
+        
+        # Verify payment status
+        payment_status = data.get("payment_status", "")
+        if payment_status != "Completed":
+            return {"status": "ignored", "reason": payment_status}
+        
+        # Lấy thông tin
+        payer_email = data.get("payer_email", "")
+        item_name   = data.get("item_name", "monthly")  # tên sản phẩm = plan
+        amount      = float(data.get("mc_gross", "0"))
+        
+        # Xác định plan từ amount hoặc item_name
+        if "year" in item_name.lower() or amount >= 20:
+            plan = "yearly"
+        elif "lifetime" in item_name.lower() or amount >= 49:
+            plan = "lifetime"
+        else:
+            plan = "monthly"
+        
+        # Tạo key và gửi email
+        result = generate_pro_key(email=payer_email, label=f"PayPal {amount}", plan=plan)
+        send_key_email(payer_email, result["key"], plan, result.get("expires_at", ""))
+        
+        print(f"PayPal payment: {payer_email} {plan} ${amount} → {result['key']}")
+        return {"status": "ok", "key_created": True}
+    except Exception as e:
+        print(f"PayPal webhook error: {e}")
+        return {"status": "error"}
 
 @app.get("/admin/stats")
 def stats(secret: str = ""):
