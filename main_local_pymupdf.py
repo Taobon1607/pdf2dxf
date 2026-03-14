@@ -202,10 +202,9 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
             mb_h = mb.height    # 2384
 
             # Output size theo rotation
-            # rotation=90/270: swap mb_w↔mb_h cho DXF dimensions
             if rotation in (90, 270):
-                pw = mb_h  # 2384 → landscape width
-                ph = mb_w  # 1684 → landscape height
+                pw = mb_h  # landscape width
+                ph = mb_w  # landscape height
             else:
                 pw = mb_w
                 ph = mb_h
@@ -229,7 +228,7 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                     y = _mh - px
                 elif _rot == 270:
                     x = py
-                    y = px
+                    y = _mw - px
                 elif _rot == 180:
                     x = _mw - px
                     y = py
