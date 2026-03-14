@@ -640,6 +640,63 @@ SMTP_USER = os.environ.get("SMTP_USER", "")
 SMTP_PASS = os.environ.get("SMTP_PASS", "")
 SMTP_FROM = os.environ.get("SMTP_FROM", "noreply@pdf2dxf.io")
 
+# ── PayOS config ──────────────────────────────────────────
+PAYOS_CLIENT_ID   = os.environ.get("PAYOS_CLIENT_ID", "")
+PAYOS_API_KEY     = os.environ.get("PAYOS_API_KEY", "")
+PAYOS_CHECKSUM_KEY = os.environ.get("PAYOS_CHECKSUM_KEY", "")
+
+PRICES = {
+    "monthly":  {"amount": 99000,  "desc": "pdf2dxf Pro - 1 Month"},
+    "yearly":   {"amount": 299000, "desc": "pdf2dxf Pro - 1 Year"},
+    "lifetime": {"amount": 999000, "desc": "pdf2dxf Pro - Lifetime"},
+}
+
+def payos_create_order(order_code: int, amount: int, description: str, 
+                        buyer_email: str, plan: str, return_url: str, cancel_url: str) -> dict:
+    """Tạo payment link qua PayOS API"""
+    import hashlib, hmac, json, urllib.request
+    
+    body = {
+        "orderCode": order_code,
+        "amount": amount,
+        "description": description[:25],  # PayOS giới hạn 25 ký tự
+        "buyerEmail": buyer_email,
+        "items": [{"name": description[:50], "quantity": 1, "price": amount}],
+        "returnUrl": return_url,
+        "cancelUrl": cancel_url,
+    }
+    
+    # Tạo signature
+    data_str = f"amount={amount}&cancelUrl={cancel_url}&description={body['description']}&orderCode={order_code}&returnUrl={return_url}"
+    signature = hmac.new(
+        PAYOS_CHECKSUM_KEY.encode(), data_str.encode(), hashlib.sha256
+    ).hexdigest()
+    body["signature"] = signature
+    
+    req = urllib.request.Request(
+        "https://api-merchant.payos.vn/v2/payment-requests",
+        data=json.dumps(body).encode(),
+        headers={
+            "Content-Type": "application/json",
+            "x-client-id": PAYOS_CLIENT_ID,
+            "x-api-key": PAYOS_API_KEY,
+        },
+        method="POST"
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return json.loads(resp.read())
+
+def payos_verify_webhook(data: dict, signature: str) -> bool:
+    """Verify webhook signature từ PayOS"""
+    import hashlib, hmac
+    # Sort keys và tạo string
+    sorted_keys = sorted(data.keys())
+    data_str = "&".join(f"{k}={data[k]}" for k in sorted_keys if data[k] is not None)
+    expected = hmac.new(
+        PAYOS_CHECKSUM_KEY.encode(), data_str.encode(), hashlib.sha256
+    ).hexdigest()
+    return expected == signature
+
 def send_key_email(to_email: str, key: str, plan: str, expires_at: str):
     """Gửi email chứa pro key cho khách"""
     if not SMTP_HOST or not SMTP_USER:
@@ -731,6 +788,114 @@ def revoke_key(secret: str = Form(...), key: str = Form(...)):
     conn.commit()
     conn.close()
     return {"revoked": key}
+
+# ── PayOS Endpoints ───────────────────────────────────────
+
+@app.post("/payos/create")
+async def payos_create(
+    request: Request,
+    email: str = Form(...),
+    plan: str = Form(default="monthly"),
+):
+    """Tạo PayOS payment link"""
+    if not PAYOS_CLIENT_ID:
+        raise HTTPException(503, "PayOS chưa được cấu hình")
+    
+    if plan not in PRICES:
+        raise HTTPException(400, "Invalid plan")
+    
+    price = PRICES[plan]
+    import random, time
+    order_code = int(time.time() * 1000) % 9999999999  # max 10 chữ số
+    
+    # Lưu pending order vào DB
+    conn = get_db()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS pending_orders (
+            order_code INTEGER PRIMARY KEY,
+            email TEXT,
+            plan TEXT,
+            created TEXT
+        )
+    """)
+    conn.execute(
+        "INSERT OR REPLACE INTO pending_orders (order_code, email, plan, created) VALUES (?,?,?,?)",
+        (order_code, email, plan, datetime.utcnow().isoformat())
+    )
+    conn.commit()
+    conn.close()
+    
+    # URL redirect sau khi thanh toán
+    origin = request.headers.get("origin", "https://taobon1607.github.io")
+    return_url = f"{origin}?payment=success&email={email}&plan={plan}"
+    cancel_url  = f"{origin}?payment=cancel"
+    
+    try:
+        result = payos_create_order(
+            order_code=order_code,
+            amount=price["amount"],
+            description=price["desc"],
+            buyer_email=email,
+            plan=plan,
+            return_url=return_url,
+            cancel_url=cancel_url,
+        )
+        if result.get("code") == "00":
+            payment_url = result["data"]["checkoutUrl"]
+            return {"url": payment_url, "order_code": order_code}
+        else:
+            raise HTTPException(500, f"PayOS error: {result.get('desc', 'Unknown')}")
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@app.post("/webhook/payos")
+async def payos_webhook(request: Request):
+    """PayOS webhook — tự động tạo key khi thanh toán thành công"""
+    import json as _json
+    try:
+        body = await request.body()
+        data = _json.loads(body)
+        
+        # Verify signature
+        webhook_data = data.get("data", {})
+        signature = data.get("signature", "")
+        
+        if not payos_verify_webhook(webhook_data, signature):
+            raise HTTPException(400, "Invalid signature")
+        
+        # Chỉ xử lý khi PAID
+        if webhook_data.get("code") != "00" and data.get("code") != "00":
+            return {"status": "ignored"}
+        
+        order_code = webhook_data.get("orderCode")
+        
+        # Lấy thông tin từ pending_orders
+        conn = get_db()
+        row = conn.execute(
+            "SELECT email, plan FROM pending_orders WHERE order_code=?", (order_code,)
+        ).fetchone()
+        
+        if not row:
+            conn.close()
+            return {"status": "order_not_found"}
+        
+        email, plan = row
+        # Xóa pending order
+        conn.execute("DELETE FROM pending_orders WHERE order_code=?", (order_code,))
+        conn.commit()
+        conn.close()
+        
+        # Tạo key và gửi email
+        result = generate_pro_key(email=email, label=f"PayOS {plan}", plan=plan)
+        send_key_email(email, result["key"], plan, result.get("expires_at", ""))
+        
+        print(f"PayOS payment success: {email} {plan} → {result['key']}")
+        return {"status": "ok"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"PayOS webhook error: {e}")
+        return {"status": "error", "detail": str(e)}
 
 @app.post("/webhook/paypal")
 async def paypal_webhook(request: Request):
