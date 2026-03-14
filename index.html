@@ -900,54 +900,112 @@
   </section>
 
   <!-- Payment Modal -->
-  <div id="paymentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
-    <div style="background:#16161f;border:1px solid #2a2a3e;border-radius:16px;padding:36px;width:420px;max-width:90vw;position:relative">
-      <button onclick="closePaymentModal()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:#9090b0;font-size:20px;cursor:pointer">✕</button>
-      <h2 style="margin-bottom:8px;font-size:20px">Upgrade to Pro</h2>
-      <p style="color:#9090b0;font-size:13px;margin-bottom:24px">Enter your email to receive your key after payment</p>
+  <div id="paymentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;align-items:center;justify-content:center;padding:16px">
+    <div style="background:#16161f;border:1px solid #2a2a3e;border-radius:16px;width:480px;max-width:100%;max-height:90vh;overflow-y:auto;position:relative">
 
-      <input type="email" id="payEmail" placeholder="your@email.com"
-        style="width:100%;padding:12px;background:#0d0d14;border:1px solid #2a2a3e;border-radius:8px;
-               color:#f0f0f8;font-size:14px;margin-bottom:16px">
-
-      <div style="display:grid;gap:10px;margin-bottom:20px">
-        <label style="display:flex;align-items:center;gap:12px;padding:14px;border:2px solid #2a2a3e;
-                      border-radius:10px;cursor:pointer" onclick="selectPlan('monthly',this)">
-          <input type="radio" name="payPlan" value="monthly" style="accent-color:#00e5ff" checked>
-          <div>
-            <div style="font-weight:600">Monthly</div>
-            <div style="color:#9090b0;font-size:12px">99.000 VNĐ / month (~$4)</div>
-          </div>
-          <div style="margin-left:auto;color:#00e5ff;font-weight:700">99K</div>
-        </label>
-        <label style="display:flex;align-items:center;gap:12px;padding:14px;border:2px solid #00e5ff;
-                      border-radius:10px;cursor:pointer" onclick="selectPlan('yearly',this)">
-          <input type="radio" name="payPlan" value="yearly" style="accent-color:#00e5ff">
-          <div>
-            <div style="font-weight:600">Yearly <span style="background:#ff6b35;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px">BEST VALUE</span></div>
-            <div style="color:#9090b0;font-size:12px">299.000 VNĐ / year (~$12)</div>
-          </div>
-          <div style="margin-left:auto;color:#00e5ff;font-weight:700">299K</div>
-        </label>
-        <label style="display:flex;align-items:center;gap:12px;padding:14px;border:2px solid #2a2a3e;
-                      border-radius:10px;cursor:pointer" onclick="selectPlan('lifetime',this)">
-          <input type="radio" name="payPlan" value="lifetime" style="accent-color:#00e5ff">
-          <div>
-            <div style="font-weight:600">Lifetime</div>
-            <div style="color:#9090b0;font-size:12px">999.000 VNĐ one-time (~$40)</div>
-          </div>
-          <div style="margin-left:auto;color:#00e5ff;font-weight:700">999K</div>
-        </label>
+      <!-- Header -->
+      <div style="padding:28px 28px 0;display:flex;justify-content:space-between;align-items:start">
+        <div>
+          <div style="font-size:11px;color:#00e5ff;font-weight:600;letter-spacing:1px;margin-bottom:6px">UPGRADE TO PRO</div>
+          <h2 style="font-size:22px;font-weight:700">Choose your plan</h2>
+        </div>
+        <button onclick="closePaymentModal()" style="background:none;border:none;color:#9090b0;font-size:22px;cursor:pointer;padding:4px">✕</button>
       </div>
 
-      <button id="btnPay" onclick="startPayment()"
-        style="width:100%;padding:14px;background:#00e5ff;color:#000;border:none;border-radius:10px;
-               font-weight:700;font-size:15px;cursor:pointer">
-        → Proceed to Payment
-      </button>
-      <p style="text-align:center;color:#9090b0;font-size:11px;margin-top:12px">
-        Supports: Bank transfer · Visa/Master · MoMo · ZaloPay via PayOS
-      </p>
+      <!-- Plan selector -->
+      <div style="padding:20px 28px 0;display:grid;gap:10px" id="planCards">
+
+        <div class="plan-card" data-plan="monthly" onclick="selectPlan('monthly')"
+          style="border:1px solid #2a2a3e;border-radius:10px;padding:16px;cursor:pointer;display:flex;align-items:center;gap:14px">
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:15px">Monthly</div>
+            <div style="color:#9090b0;font-size:12px;margin-top:2px">Billed monthly · cancel anytime</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:22px;font-weight:700;color:#f0f0f8">$4</div>
+            <div style="font-size:11px;color:#9090b0">/month</div>
+          </div>
+        </div>
+
+        <div class="plan-card selected-plan" data-plan="yearly" onclick="selectPlan('yearly')"
+          style="border:2px solid #00e5ff;border-radius:10px;padding:16px;cursor:pointer;display:flex;align-items:center;gap:14px;position:relative">
+          <div style="position:absolute;top:-10px;left:16px;background:#ff6b35;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px">BEST VALUE — SAVE 75%</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:15px">Yearly</div>
+            <div style="color:#9090b0;font-size:12px;margin-top:2px">Billed once a year</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:22px;font-weight:700;color:#00e5ff">$12</div>
+            <div style="font-size:11px;color:#9090b0">/year</div>
+          </div>
+        </div>
+
+        <div class="plan-card" data-plan="lifetime" onclick="selectPlan('lifetime')"
+          style="border:1px solid #2a2a3e;border-radius:10px;padding:16px;cursor:pointer;display:flex;align-items:center;gap:14px">
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:15px">Lifetime</div>
+            <div style="color:#9090b0;font-size:12px;margin-top:2px">Pay once, use forever</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:22px;font-weight:700;color:#f0f0f8">$39</div>
+            <div style="font-size:11px;color:#9090b0">one-time</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Email -->
+      <div style="padding:20px 28px 0">
+        <label style="font-size:12px;color:#9090b0;display:block;margin-bottom:6px">YOUR EMAIL — we'll send your key here</label>
+        <input type="email" id="payEmail" placeholder="you@example.com"
+          style="width:100%;padding:12px 14px;background:#0d0d14;border:1px solid #2a2a3e;border-radius:8px;
+                 color:#f0f0f8;font-size:14px">
+      </div>
+
+      <!-- Payment method tabs -->
+      <div style="padding:20px 28px 0">
+        <label style="font-size:12px;color:#9090b0;display:block;margin-bottom:10px">PAYMENT METHOD</label>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button class="pay-tab active-tab" id="tab-intl" onclick="switchTab('intl')"
+            style="flex:1;padding:10px;border-radius:8px;border:2px solid #00e5ff;background:rgba(0,229,255,0.08);
+                   color:#00e5ff;font-weight:600;font-size:13px;cursor:pointer">
+            💳 Card / PayOS
+          </button>
+          <button class="pay-tab" id="tab-vn" onclick="switchTab('vn')"
+            style="flex:1;padding:10px;border-radius:8px;border:1px solid #2a2a3e;background:none;
+                   color:#9090b0;font-weight:600;font-size:13px;cursor:pointer">
+            🇻🇳 VN Transfer
+          </button>
+        </div>
+
+        <!-- Tab: International (PayOS) -->
+        <div id="pane-intl">
+          <button id="btnPay" onclick="startPayment()"
+            style="width:100%;padding:14px;background:#00e5ff;color:#000;border:none;border-radius:10px;
+                   font-weight:700;font-size:15px;cursor:pointer">
+            Pay with Card / MoMo / QR →
+          </button>
+          <p style="text-align:center;color:#9090b0;font-size:11px;margin-top:10px">
+            Visa · Mastercard · MoMo · ZaloPay · Bank QR — secured by PayOS
+          </p>
+        </div>
+
+        <!-- Tab: Vietnam manual transfer -->
+        <div id="pane-vn" style="display:none">
+          <div id="vn-bank-info" style="background:#0d0d14;border:1px solid #2a2a3e;border-radius:10px;padding:16px;font-size:13px;line-height:2">
+            <div style="display:flex;justify-content:space-between"><span style="color:#9090b0">Bank</span><strong>Techcombank (TCB)</strong></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:#9090b0">Account No.</span><strong id="vn-account-num">19035874332010</strong></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:#9090b0">Account Name</span><strong>LE VAN TU</strong></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:#9090b0">Amount</span><strong id="vn-amount">99.000 VNĐ</strong></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:#9090b0">Note</span><strong id="vn-note" style="color:#00e5ff">pdf2dxf pro</strong></div>
+          </div>
+          <p style="color:#9090b0;font-size:12px;margin-top:12px;line-height:1.6">
+            After transfer, email <strong style="color:#f0f0f8"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="6c1f191c1c031e182c1c080a5e08140a420503">[email&#160;protected]</a></strong> with your transaction screenshot. Key will be sent within 24h.
+          </p>
+        </div>
+      </div>
+
+      <div style="height:24px"></div>
     </div>
   </div>
 
@@ -962,7 +1020,7 @@
 
 </div><!-- /container -->
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ─── State ───────────────────────────────────────────────
 const RAILWAY_URL = 'https://web-production-f7ee7.up.railway.app';
 const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -1267,71 +1325,79 @@ function toggleCustomScale(val) {
 }
 
 // ── Payment Modal ─────────────────────────────────────────
+const PLAN_INFO = {
+  monthly:  { usd: '$4',  vnd: '99.000 VNĐ',   label: 'Monthly'  },
+  yearly:   { usd: '$12', vnd: '299.000 VNĐ',  label: 'Yearly'   },
+  lifetime: { usd: '$39', vnd: '999.000 VNĐ',  label: 'Lifetime' },
+};
+let selectedPlan = 'yearly';
+
 function openPaymentModal() {
   document.getElementById('paymentModal').style.display = 'flex';
+  selectPlan('yearly');
 }
 function closePaymentModal() {
   document.getElementById('paymentModal').style.display = 'none';
 }
-function selectPlan(plan, el) {
-  document.querySelectorAll('[name=payPlan]').forEach(r => {
-    r.closest('label').style.borderColor = '#2a2a3e';
+
+function selectPlan(plan) {
+  selectedPlan = plan;
+  document.querySelectorAll('.plan-card').forEach(el => {
+    const isSelected = el.dataset.plan === plan;
+    el.style.border = isSelected ? '2px solid #00e5ff' : '1px solid #2a2a3e';
   });
-  el.style.borderColor = '#00e5ff';
-  el.querySelector('input').checked = true;
+  // Update VN amount
+  document.getElementById('vn-amount').textContent = PLAN_INFO[plan]?.vnd || '';
+  document.getElementById('vn-note').textContent = `pdf2dxf ${plan}`;
+}
+
+function switchTab(tab) {
+  const isIntl = tab === 'intl';
+  document.getElementById('pane-intl').style.display = isIntl ? 'block' : 'none';
+  document.getElementById('pane-vn').style.display   = isIntl ? 'none'  : 'block';
+  document.getElementById('tab-intl').style.border  = isIntl ? '2px solid #00e5ff' : '1px solid #2a2a3e';
+  document.getElementById('tab-intl').style.color   = isIntl ? '#00e5ff' : '#9090b0';
+  document.getElementById('tab-intl').style.background = isIntl ? 'rgba(0,229,255,0.08)' : 'none';
+  document.getElementById('tab-vn').style.border    = isIntl ? '1px solid #2a2a3e' : '2px solid #00e5ff';
+  document.getElementById('tab-vn').style.color     = isIntl ? '#9090b0' : '#00e5ff';
+  document.getElementById('tab-vn').style.background = isIntl ? 'none' : 'rgba(0,229,255,0.08)';
 }
 
 document.getElementById('btnUpgrade').addEventListener('click', openPaymentModal);
 
 async function startPayment() {
   const email = document.getElementById('payEmail').value.trim();
-  const plan  = document.querySelector('[name=payPlan]:checked')?.value || 'monthly';
-
   if (!email || !email.includes('@')) {
     alert('Please enter a valid email address');
     return;
   }
-
   const btn = document.getElementById('btnPay');
   btn.disabled = true;
   btn.textContent = 'Creating payment…';
-
   try {
     const fd = new FormData();
     fd.append('email', email);
-    fd.append('plan', plan);
+    fd.append('plan', selectedPlan);
     const res = await fetch(`${API_BASE}/payos/create`, { method: 'POST', body: fd });
     const data = await res.json();
-
     if (data.url) {
-      // Redirect đến trang thanh toán PayOS
       window.location.href = data.url;
     } else {
       alert('Payment error: ' + (data.detail || 'Unknown error'));
       btn.disabled = false;
-      btn.textContent = '→ Proceed to Payment';
+      btn.textContent = 'Pay with Card / MoMo / QR →';
     }
   } catch(e) {
     alert('Cannot connect to server. Please try again.');
     btn.disabled = false;
-    btn.textContent = '→ Proceed to Payment';
+    btn.textContent = 'Pay with Card / MoMo / QR →';
   }
 }
 
-// Xử lý redirect sau khi thanh toán
+// Xử lý redirect sau thanh toán
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('payment') === 'success') {
   const email = urlParams.get('email') || '';
   setTimeout(() => {
-    alert(`✓ Payment successful!\n\nYour Pro key has been sent to: ${email}\n\nPlease check your inbox (and spam folder).`);
-    // Xóa params khỏi URL
-    window.history.replaceState({}, '', window.location.pathname);
-  }, 500);
-} else if (urlParams.get('payment') === 'cancel') {
-  setTimeout(() => {
-    window.history.replaceState({}, '', window.location.pathname);
-  }, 100);
-}
-</script>
-</body>
-</html>
+    alert(`✓ Payment successful!\n\nYour Pro key has been sent to:\n${email}\n\nCheck your inbox (and spam folder).`);
+    window.histor
