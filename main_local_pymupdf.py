@@ -263,20 +263,23 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                 # ── Collect tất cả điểm trong path để detect circle ──
                 items = path.get("items", [])
 
-                # Thử detect circle từ toàn bộ path trước
+                # Detect circle: chỉ từ bezier curves (c), không dùng lines (l)
+                # Rectangle có 4 corners đều cách đều center → false positive nếu dùng l
                 all_pts = []
-                for item in items:
-                    if item[0] == "c":
-                        p1,p2,p3,p4 = item[1],item[2],item[3],item[4]
-                        for t_i in range(5):
-                            t = t_i/4
-                            mt = 1-t
-                            x = mt**3*p1.x+3*mt**2*t*p2.x+3*mt*t**2*p3.x+t**3*p4.x
-                            y = mt**3*p1.y+3*mt**2*t*p2.y+3*mt*t**2*p3.y+t**3*p4.y
-                            all_pts.append(to_dxf(x,y))
-                    elif item[0] == "l":
-                        all_pts.append(to_dxf(item[1].x, item[1].y))
-                        all_pts.append(to_dxf(item[2].x, item[2].y))
+                has_curves = any(it[0] == "c" for it in items)
+                has_lines  = any(it[0] == "l" for it in items)
+
+                if has_curves and not has_lines:
+                    # Pure bezier path → có thể là circle
+                    for item in items:
+                        if item[0] == "c":
+                            p1,p2,p3,p4 = item[1],item[2],item[3],item[4]
+                            for t_i in range(5):
+                                t = t_i/4
+                                mt = 1-t
+                                x = mt**3*p1.x+3*mt**2*t*p2.x+3*mt*t**2*p3.x+t**3*p4.x
+                                y = mt**3*p1.y+3*mt**2*t*p2.y+3*mt*t**2*p3.y+t**3*p4.y
+                                all_pts.append(to_dxf(x,y))
 
                 if all_pts:
                     is_circ, cx, cy, r = pts_are_circle(all_pts)
