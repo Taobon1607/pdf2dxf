@@ -337,22 +337,48 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                         msp.add_lwpolyline(pts, dxfattribs={"layer": layer_name, "closed": True})
                         entities += 1
 
-                # Build connected polyline từ tất cả curve segments trong path
-                curve_pts = []
+                # Build polylines từ curve segments, tách theo subpath (move point)
+                # Mỗi subpath = group liên tục không có "l" nối về điểm đầu khác
+                curve_segments = []  # list of lists
+                cur_seg = []
+                prev_end = None
+
                 for item in items:
-                    if item[0] == "c":
+                    itype2 = item[0]
+                    if itype2 == "l":
+                        p1, p2 = item[1], item[2]
+                        # Nếu điểm đầu không khớp điểm cuối trước → subpath mới
+                        if prev_end and (abs(p1.x - prev_end[0]) > 1 or abs(p1.y - prev_end[1]) > 1):
+                            if len(cur_seg) >= 2:
+                                curve_segments.append(cur_seg)
+                            cur_seg = [to_dxf(p1.x, p1.y)]
+                        elif not cur_seg:
+                            cur_seg = [to_dxf(p1.x, p1.y)]
+                        cur_seg.append(to_dxf(p2.x, p2.y))
+                        prev_end = (p2.x, p2.y)
+                    elif itype2 == "c":
                         p1,p2,p3,p4 = item[1],item[2],item[3],item[4]
-                        n = 12
-                        start_i = 0 if not curve_pts else 1  # tránh duplicate điểm nối
+                        if prev_end and (abs(p1.x - prev_end[0]) > 1 or abs(p1.y - prev_end[1]) > 1):
+                            if len(cur_seg) >= 2:
+                                curve_segments.append(cur_seg)
+                            cur_seg = []
+                        n = 8
+                        start_i = 0 if not cur_seg else 1
                         for t_i in range(start_i, n+1):
                             t = t_i/n
                             mt = 1-t
                             x = mt**3*p1.x+3*mt**2*t*p2.x+3*mt*t**2*p3.x+t**3*p4.x
                             y = mt**3*p1.y+3*mt**2*t*p2.y+3*mt*t**2*p3.y+t**3*p4.y
-                            curve_pts.append(to_dxf(x,y))
-                if len(curve_pts) >= 2:
-                    msp.add_lwpolyline(curve_pts, dxfattribs={"layer": layer_name})
-                    entities += 1
+                            cur_seg.append(to_dxf(x,y))
+                        prev_end = (p4.x, p4.y)
+
+                if len(cur_seg) >= 2:
+                    curve_segments.append(cur_seg)
+
+                for seg in curve_segments:
+                    if len(seg) >= 2:
+                        msp.add_lwpolyline(seg, dxfattribs={"layer": layer_name})
+                        entities += 1
 
             # Text extraction disabled by default — geometry only
             # Enable bằng cách tick "Include text layer" trong UI
