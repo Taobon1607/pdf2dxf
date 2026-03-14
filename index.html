@@ -899,6 +899,58 @@
     </div>
   </section>
 
+  <!-- Payment Modal -->
+  <div id="paymentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:#16161f;border:1px solid #2a2a3e;border-radius:16px;padding:36px;width:420px;max-width:90vw;position:relative">
+      <button onclick="closePaymentModal()" style="position:absolute;top:16px;right:16px;background:none;border:none;color:#9090b0;font-size:20px;cursor:pointer">✕</button>
+      <h2 style="margin-bottom:8px;font-size:20px">Upgrade to Pro</h2>
+      <p style="color:#9090b0;font-size:13px;margin-bottom:24px">Enter your email to receive your key after payment</p>
+
+      <input type="email" id="payEmail" placeholder="your@email.com"
+        style="width:100%;padding:12px;background:#0d0d14;border:1px solid #2a2a3e;border-radius:8px;
+               color:#f0f0f8;font-size:14px;margin-bottom:16px">
+
+      <div style="display:grid;gap:10px;margin-bottom:20px">
+        <label style="display:flex;align-items:center;gap:12px;padding:14px;border:2px solid #2a2a3e;
+                      border-radius:10px;cursor:pointer" onclick="selectPlan('monthly',this)">
+          <input type="radio" name="payPlan" value="monthly" style="accent-color:#00e5ff" checked>
+          <div>
+            <div style="font-weight:600">Monthly</div>
+            <div style="color:#9090b0;font-size:12px">99.000 VNĐ / month (~$4)</div>
+          </div>
+          <div style="margin-left:auto;color:#00e5ff;font-weight:700">99K</div>
+        </label>
+        <label style="display:flex;align-items:center;gap:12px;padding:14px;border:2px solid #00e5ff;
+                      border-radius:10px;cursor:pointer" onclick="selectPlan('yearly',this)">
+          <input type="radio" name="payPlan" value="yearly" style="accent-color:#00e5ff">
+          <div>
+            <div style="font-weight:600">Yearly <span style="background:#ff6b35;color:#fff;font-size:10px;padding:2px 6px;border-radius:4px;margin-left:6px">BEST VALUE</span></div>
+            <div style="color:#9090b0;font-size:12px">299.000 VNĐ / year (~$12)</div>
+          </div>
+          <div style="margin-left:auto;color:#00e5ff;font-weight:700">299K</div>
+        </label>
+        <label style="display:flex;align-items:center;gap:12px;padding:14px;border:2px solid #2a2a3e;
+                      border-radius:10px;cursor:pointer" onclick="selectPlan('lifetime',this)">
+          <input type="radio" name="payPlan" value="lifetime" style="accent-color:#00e5ff">
+          <div>
+            <div style="font-weight:600">Lifetime</div>
+            <div style="color:#9090b0;font-size:12px">999.000 VNĐ one-time (~$40)</div>
+          </div>
+          <div style="margin-left:auto;color:#00e5ff;font-weight:700">999K</div>
+        </label>
+      </div>
+
+      <button id="btnPay" onclick="startPayment()"
+        style="width:100%;padding:14px;background:#00e5ff;color:#000;border:none;border-radius:10px;
+               font-weight:700;font-size:15px;cursor:pointer">
+        → Proceed to Payment
+      </button>
+      <p style="text-align:center;color:#9090b0;font-size:11px;margin-top:12px">
+        Supports: Bank transfer · Visa/Master · MoMo · ZaloPay via PayOS
+      </p>
+    </div>
+  </div>
+
   <footer>
     <div style="margin-bottom:16px">
       <a href="#">Privacy</a>
@@ -1214,11 +1266,72 @@ function toggleCustomScale(val) {
   }
 }
 
-// Stripe checkout placeholder
-document.getElementById('btnUpgrade').addEventListener('click', async () => {
-  // Replace with: window.location.href = await fetch('/create-checkout').then(r=>r.json()).then(d=>d.url)
-  alert('Stripe checkout — configure STRIPE_SECRET_KEY in backend to activate.');
-});
+// ── Payment Modal ─────────────────────────────────────────
+function openPaymentModal() {
+  document.getElementById('paymentModal').style.display = 'flex';
+}
+function closePaymentModal() {
+  document.getElementById('paymentModal').style.display = 'none';
+}
+function selectPlan(plan, el) {
+  document.querySelectorAll('[name=payPlan]').forEach(r => {
+    r.closest('label').style.borderColor = '#2a2a3e';
+  });
+  el.style.borderColor = '#00e5ff';
+  el.querySelector('input').checked = true;
+}
+
+document.getElementById('btnUpgrade').addEventListener('click', openPaymentModal);
+
+async function startPayment() {
+  const email = document.getElementById('payEmail').value.trim();
+  const plan  = document.querySelector('[name=payPlan]:checked')?.value || 'monthly';
+
+  if (!email || !email.includes('@')) {
+    alert('Please enter a valid email address');
+    return;
+  }
+
+  const btn = document.getElementById('btnPay');
+  btn.disabled = true;
+  btn.textContent = 'Creating payment…';
+
+  try {
+    const fd = new FormData();
+    fd.append('email', email);
+    fd.append('plan', plan);
+    const res = await fetch(`${API_BASE}/payos/create`, { method: 'POST', body: fd });
+    const data = await res.json();
+
+    if (data.url) {
+      // Redirect đến trang thanh toán PayOS
+      window.location.href = data.url;
+    } else {
+      alert('Payment error: ' + (data.detail || 'Unknown error'));
+      btn.disabled = false;
+      btn.textContent = '→ Proceed to Payment';
+    }
+  } catch(e) {
+    alert('Cannot connect to server. Please try again.');
+    btn.disabled = false;
+    btn.textContent = '→ Proceed to Payment';
+  }
+}
+
+// Xử lý redirect sau khi thanh toán
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('payment') === 'success') {
+  const email = urlParams.get('email') || '';
+  setTimeout(() => {
+    alert(`✓ Payment successful!\n\nYour Pro key has been sent to: ${email}\n\nPlease check your inbox (and spam folder).`);
+    // Xóa params khỏi URL
+    window.history.replaceState({}, '', window.location.pathname);
+  }, 500);
+} else if (urlParams.get('payment') === 'cancel') {
+  setTimeout(() => {
+    window.history.replaceState({}, '', window.location.pathname);
+  }, 100);
+}
 </script>
 </body>
 </html>
