@@ -228,7 +228,7 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                     y = _mh - px
                 elif _rot == 270:
                     x = py
-                    y = _mw - px
+                    y = px
                 elif _rot == 180:
                     x = _mw - px
                     y = py
