@@ -646,9 +646,9 @@ PAYOS_API_KEY     = os.environ.get("PAYOS_API_KEY", "")
 PAYOS_CHECKSUM_KEY = os.environ.get("PAYOS_CHECKSUM_KEY", "")
 
 PRICES = {
-    "monthly":  {"amount": 99000,  "desc": "pdf2dxf Pro - 1 Month"},
-    "yearly":   {"amount": 299000, "desc": "pdf2dxf Pro - 1 Year"},
-    "lifetime": {"amount": 999000, "desc": "pdf2dxf Pro - Lifetime"},
+    "monthly":  {"amount": 99000,  "usd": 4,  "desc": "pdf2dxf Pro - 1 Month"},
+    "yearly":   {"amount": 299000, "usd": 12, "desc": "pdf2dxf Pro - 1 Year"},
+    "lifetime": {"amount": 999000, "usd": 39, "desc": "pdf2dxf Pro - Lifetime"},
 }
 
 def payos_create_order(order_code: int, amount: int, description: str, 
