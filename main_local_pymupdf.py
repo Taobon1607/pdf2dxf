@@ -2,17 +2,104 @@
 PDF to DXF — PyMuPDF version
 Dùng page.get_drawings() để lấy đầy đủ: color, fill, dashes, linewidth, path type
 """
-import os, uuid, re, tempfile, math
+import os, uuid, re, tempfile, math, sqlite3, secrets, string
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, date
 
-from fastapi import FastAPI, File, UploadFile, HTTPException, Form
+from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 OUTPUT_DIR = Path("tmp/outputs")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 job_results = {}
+
+# ── Database setup ─────────────────────────────────────────
+DB_PATH = Path("tmp/usage.db")
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+def get_db():
+    conn = sqlite3.connect(str(DB_PATH))
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS usage (
+            ip TEXT NOT NULL,
+            day TEXT NOT NULL,
+            count INTEGER DEFAULT 0,
+            PRIMARY KEY (ip, day)
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS pro_keys (
+            key TEXT PRIMARY KEY,
+            label TEXT,
+            created TEXT,
+            active INTEGER DEFAULT 1
+        )
+    """)
+    conn.commit()
+    return conn
+
+FREE_LIMIT = 5  # lượt free mỗi ngày
+ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "changeme123")  # set trong Railway env
+
+def get_client_ip(request: Request) -> str:
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host
+
+def check_usage(ip: str, pro_key: str = "") -> dict:
+    """Kiểm tra usage. Return {allowed, remaining, is_pro}"""
+    # Check pro key trước
+    if pro_key:
+        conn = get_db()
+        row = conn.execute(
+            "SELECT active FROM pro_keys WHERE key=?", (pro_key.strip(),)
+        ).fetchone()
+        conn.close()
+        if row and row[0] == 1:
+            return {"allowed": True, "remaining": 999, "is_pro": True}
+        else:
+            return {"allowed": False, "remaining": 0, "is_pro": False, "error": "Invalid or inactive pro key"}
+
+    # Check IP limit
+    today = date.today().isoformat()
+    conn = get_db()
+    row = conn.execute(
+        "SELECT count FROM usage WHERE ip=? AND day=?", (ip, today)
+    ).fetchone()
+    count = row[0] if row else 0
+    conn.close()
+
+    remaining = max(0, FREE_LIMIT - count)
+    return {
+        "allowed": count < FREE_LIMIT,
+        "remaining": remaining,
+        "is_pro": False,
+        "used": count
+    }
+
+def increment_usage(ip: str):
+    today = date.today().isoformat()
+    conn = get_db()
+    conn.execute("""
+        INSERT INTO usage (ip, day, count) VALUES (?, ?, 1)
+        ON CONFLICT(ip, day) DO UPDATE SET count = count + 1
+    """, (ip, today))
+    conn.commit()
+    conn.close()
+
+def generate_pro_key(label: str = "") -> str:
+    chars = string.ascii_uppercase + string.digits
+    key = "PRO-" + "".join(secrets.choice(chars) for _ in range(20))
+    conn = get_db()
+    conn.execute(
+        "INSERT INTO pro_keys (key, label, created) VALUES (?, ?, ?)",
+        (key, label, datetime.utcnow().isoformat())
+    )
+    conn.commit()
+    conn.close()
+    return key
 
 app = FastAPI(title="PDF to DXF PyMuPDF")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -455,17 +542,33 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
 def health():
     return {"status": "ok", "version": "pymupdf", "time": datetime.utcnow().isoformat()}
 
+@app.get("/usage")
+def check_usage_endpoint(request: Request, pro_key: str = ""):
+    ip = get_client_ip(request)
+    return check_usage(ip, pro_key)
+
 @app.post("/convert")
 async def convert(
+    request: Request,
     files: list[UploadFile] = File(...),
     version: str = Form(default="R2010"),
     scale:   str = Form(default="1"),
     units:   str = Form(default="mm"),
     include_text:  str = Form(default="0"),
     include_hatch: str = Form(default="1"),
+    pro_key: str = Form(default=""),
 ):
     if not files:
         raise HTTPException(400, "No files")
+
+    # Check rate limit
+    ip = get_client_ip(request)
+    usage = check_usage(ip, pro_key)
+    if not usage["allowed"]:
+        if usage.get("error"):
+            raise HTTPException(403, usage["error"])
+        raise HTTPException(429, f"Daily limit reached ({FREE_LIMIT} conversions/day). Upgrade to Pro for unlimited access.")
+
     try:
         scale_f = max(0.001, float(scale))
     except:
@@ -485,8 +588,60 @@ async def convert(
     except Exception as e:
         import traceback
         raise HTTPException(500, f"Conversion failed: {e}\n{traceback.format_exc()}")
+
+    # Tính usage sau khi convert thành công
+    if not usage["is_pro"]:
+        increment_usage(ip)
+
     job_results[result["job_id"]] = result
-    return {"job_id": result["job_id"], "files": 1}
+    remaining_after = max(0, usage.get("remaining", FREE_LIMIT) - 1)
+    return {
+        "job_id": result["job_id"],
+        "files": 1,
+        "remaining": remaining_after if not usage["is_pro"] else 999,
+        "is_pro": usage["is_pro"]
+    }
+
+# ── Admin endpoints ────────────────────────────────────────
+
+@app.post("/admin/create-key")
+def create_key(secret: str = Form(...), label: str = Form(default="")):
+    if secret != ADMIN_SECRET:
+        raise HTTPException(403, "Forbidden")
+    key = generate_pro_key(label)
+    return {"key": key, "label": label}
+
+@app.get("/admin/list-keys")
+def list_keys(secret: str = ""):
+    if secret != ADMIN_SECRET:
+        raise HTTPException(403, "Forbidden")
+    conn = get_db()
+    rows = conn.execute("SELECT key, label, created, active FROM pro_keys ORDER BY created DESC").fetchall()
+    conn.close()
+    return {"keys": [{"key": r[0], "label": r[1], "created": r[2], "active": r[3]} for r in rows]}
+
+@app.post("/admin/revoke-key")
+def revoke_key(secret: str = Form(...), key: str = Form(...)):
+    if secret != ADMIN_SECRET:
+        raise HTTPException(403, "Forbidden")
+    conn = get_db()
+    conn.execute("UPDATE pro_keys SET active=0 WHERE key=?", (key,))
+    conn.commit()
+    conn.close()
+    return {"revoked": key}
+
+@app.get("/admin/stats")
+def stats(secret: str = ""):
+    if secret != ADMIN_SECRET:
+        raise HTTPException(403, "Forbidden")
+    conn = get_db()
+    today = date.today().isoformat()
+    today_total = conn.execute("SELECT SUM(count) FROM usage WHERE day=?", (today,)).fetchone()[0] or 0
+    week_total  = conn.execute("SELECT SUM(count) FROM usage WHERE day >= date('now', '-7 days')").fetchone()[0] or 0
+    total_keys  = conn.execute("SELECT COUNT(*) FROM pro_keys WHERE active=1").fetchone()[0]
+    conn.close()
+    return {"today": today_total, "week": week_total, "active_pro_keys": total_keys}
+
 
 @app.post("/detect-scale")
 async def detect_scale(files: list[UploadFile] = File(...)):
