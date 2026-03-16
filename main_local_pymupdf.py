@@ -1,23 +1,19 @@
-"""
 PDF to DXF — PyMuPDF version
 Dùng page.get_drawings() để lấy đầy đủ: color, fill, dashes, linewidth, path type
 """
 import os, uuid, re, tempfile, math, sqlite3, secrets, string
 from pathlib import Path
 from datetime import datetime, date
-
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-
 OUTPUT_DIR = Path("tmp/outputs")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 job_results = {}
-
 # ── Database setup ─────────────────────────────────────────
-DB_PATH = Path("tmp/usage.db")
+DATA_DIR = os.environ.get("DATA_DIR", "data")
+DB_PATH = Path(DATA_DIR) / "usage.db"
 DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-
 def get_db():
     conn = sqlite3.connect(str(DB_PATH))
     conn.execute("""
@@ -48,16 +44,13 @@ def get_db():
     except: pass
     conn.commit()
     return conn
-
 FREE_LIMIT = 5  # lượt free mỗi ngày
 ADMIN_SECRET = os.environ.get("ADMIN_SECRET", "changeme123")  # set trong Railway env
-
 def get_client_ip(request: Request) -> str:
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded:
         return forwarded.split(",")[0].strip()
     return request.client.host
-
 def check_usage(ip: str, pro_key: str = "") -> dict:
     """Kiểm tra usage. Return {allowed, remaining, is_pro}"""
     # Check pro key trước
@@ -76,7 +69,6 @@ def check_usage(ip: str, pro_key: str = "") -> dict:
             return {"allowed": True, "remaining": 999, "is_pro": True}
         else:
             return {"allowed": False, "remaining": 0, "is_pro": False, "error": "Invalid or inactive pro key"}
-
     # Check IP limit
     today = date.today().isoformat()
     conn = get_db()
@@ -85,7 +77,6 @@ def check_usage(ip: str, pro_key: str = "") -> dict:
     ).fetchone()
     count = row[0] if row else 0
     conn.close()
-
     remaining = max(0, FREE_LIMIT - count)
     return {
         "allowed": count < FREE_LIMIT,
@@ -93,7 +84,6 @@ def check_usage(ip: str, pro_key: str = "") -> dict:
         "is_pro": False,
         "used": count
     }
-
 def increment_usage(ip: str):
     today = date.today().isoformat()
     conn = get_db()
@@ -103,7 +93,6 @@ def increment_usage(ip: str):
     """, (ip, today))
     conn.commit()
     conn.close()
-
 def generate_pro_key(email: str = "", label: str = "", plan: str = "monthly") -> dict:
     from datetime import date, timedelta
     chars = string.ascii_uppercase + string.digits
@@ -129,24 +118,19 @@ def generate_pro_key(email: str = "", label: str = "", plan: str = "monthly") ->
     conn.commit()
     conn.close()
     return {"key": key, "email": email, "plan": plan, "expires_at": expires_at}
-
 app = FastAPI(title="PDF to DXF PyMuPDF")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-
 VERSION_MAP = {
     "R12":"AC1009","R2000":"AC1015","R2004":"AC1018",
     "R2007":"AC1021","R2010":"AC1024","R2013":"AC1027","R2018":"AC1032",
 }
-
 # ── Color → Layer mapping ─────────────────────────────────
 # PDF color là tuple RGB float (0.0–1.0)
 # Map sang AutoCAD color index + layer name
-
 def rgb_to_aci(r, g, b):
     """Chuyển RGB float → AutoCAD Color Index (ACI) gần nhất"""
     # Một số màu chuẩn hay gặp trong bản vẽ kết cấu
     r8, g8, b8 = int(r*255), int(g*255), int(b*255)
-
     # Black / near-black → white in CAD (color 7)
     if r8 < 30 and g8 < 30 and b8 < 30:
         return 7
@@ -175,7 +159,6 @@ def rgb_to_aci(r, g, b):
     if abs(r8-g8) < 30 and abs(g8-b8) < 30 and r8 > 30:
         return 8
     return 7
-
 def color_to_layer(stroke_rgb, fill_rgb, lw_mm, is_dashed):
     """
     Tạo tên layer từ màu + linewidth.
@@ -186,7 +169,6 @@ def color_to_layer(stroke_rgb, fill_rgb, lw_mm, is_dashed):
             r,g,b = stroke_rgb
             return f"DASHED_{int(r*255):02X}{int(g*255):02X}{int(b*255):02X}"
         return "DASHED"
-
     if stroke_rgb:
         r,g,b = stroke_rgb
         # Snap về màu chuẩn
@@ -211,9 +193,7 @@ def color_to_layer(stroke_rgb, fill_rgb, lw_mm, is_dashed):
         else:
             color_name = f"C{int(r*255):02X}{int(g*255):02X}{int(b*255):02X}"
         return color_name
-
     return "GEOMETRY"
-
 def ensure_layer(doc, name, layer_set, aci_color=7, is_dashed=False):
     safe = re.sub(r'[<>/\\:?"*|=;,\s]', "_", str(name))[:255] or "0"
     if safe not in layer_set:
@@ -235,8 +215,6 @@ def ensure_layer(doc, name, layer_set, aci_color=7, is_dashed=False):
             safe = "0"
     layer_set.add(safe)
     return safe
-
-
 def pts_are_circle(pts_2d):
     """Detect circle từ list điểm 2D"""
     if len(pts_2d) < 6:
@@ -250,33 +228,25 @@ def pts_are_circle(pts_2d):
     variance = sum((r-r_avg)**2 for r in radii) / len(radii)
     cv = math.sqrt(variance) / r_avg
     return (cv < 0.04), cx, cy, r_avg
-
-
 def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
     import fitz  # PyMuPDF
     import ezdxf
-
     if opts is None:
         opts = {}
     include_text  = opts.get("include_text", False)
     include_hatch = opts.get("include_hatch", True)
-
     dxf_version = VERSION_MAP.get(version, "AC1024")
     doc = ezdxf.new(dxf_version)
     msp = doc.modelspace()
-
     # Set DXF units header (4=mm, 1=inch, 6=m)
     unit_code = {"mm": 4, "cm": 5, "m": 6, "inch": 1}.get(units, 4)
     doc.header["$INSUNITS"] = unit_code
     doc.header["$LUNITS"] = 2  # decimal
-
     # PyMuPDF unit = points (1/72 inch)
     UNIT_MULT = {"mm":25.4/72, "cm":2.54/72, "m":0.0254/72, "inch":1.0/72}
     mult = UNIT_MULT.get(units, 25.4/72) / scale
-
     entities = 0
     layers = {"0"}
-
     # Pre-create standard layers
     standard = {
         "BLACK":   7,  "WHITE":  7,  "RED":    1,
@@ -287,7 +257,6 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
     }
     for lname, aci in standard.items():
         ensure_layer(doc, lname, layers, aci, lname.startswith("DASHED"))
-
     # Thêm linetype DASHDOT cho center line
     try:
         if "DASHDOT" not in doc.linetypes:
@@ -298,16 +267,13 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
             })
     except Exception:
         pass
-
     with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
         tmp.write(pdf_bytes)
         tmp_path = tmp.name
-
     try:
         pdf_doc = fitz.open(tmp_path)
         y_offset = 0.0
         PAGE_GAP = 50.0
-
         for page_num in range(len(pdf_doc)):
             page = pdf_doc[page_num]
             # Drawings và text luôn dùng mediabox coordinates
@@ -316,7 +282,6 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
             mb = page.mediabox  # kích thước gốc, chưa rotate
             mb_w = mb.width     # 1684
             mb_h = mb.height    # 2384
-
             # Output size theo rotation
             if rotation in (90, 270):
                 pw = mb_h  # landscape width
@@ -324,11 +289,9 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
             else:
                 pw = mb_w
                 ph = mb_h
-
             ph_u = ph * mult
             pw_u = pw * mult
             cur_offset = y_offset
-
             # Transform coordinate tùy rotation
             # rotation=90: x_dxf = py_pdf, y_dxf = mb_w - px_pdf
             # rotation=270: x_dxf = mb_h - py_pdf, y_dxf = px_pdf
@@ -352,39 +315,31 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                     x = px
                     y = _mh - py
                 return (x * mult, _o + y * mult)
-
             # Border page
             msp.add_lwpolyline([
                 (0, cur_offset), (pw_u, cur_offset),
                 (pw_u, cur_offset + ph_u), (0, cur_offset + ph_u),
                 (0, cur_offset)
             ], dxfattribs={"layer": "BLACK", "closed": True})
-
             # ── Extract drawings (geometry) ───────────────
             drawings = page.get_drawings()
-
             for path in drawings:
                 stroke_color = path.get("color")    # RGB tuple hoặc None
                 fill_color   = path.get("fill")     # RGB tuple hoặc None
                 lw_pt        = path.get("width", 0) or 0
                 lw_mm        = lw_pt * 0.3528
                 dashes       = path.get("dashes")   # string dash pattern
-
                 is_dashed = bool(dashes and dashes.strip() not in ("", "[]", "[0]"))
-
                 layer_name = color_to_layer(stroke_color, fill_color, lw_mm, is_dashed)
                 aci = rgb_to_aci(*(stroke_color if stroke_color else (0,0,0)))
                 layer_name = ensure_layer(doc, layer_name, layers, aci, is_dashed)
-
                 # ── Collect tất cả điểm trong path để detect circle ──
                 items = path.get("items", [])
-
                 # Detect circle: chỉ từ bezier curves (c), không dùng lines (l)
                 # Rectangle có 4 corners đều cách đều center → false positive nếu dùng l
                 all_pts = []
                 has_curves = any(it[0] == "c" for it in items)
                 has_lines  = any(it[0] == "l" for it in items)
-
                 if has_curves and not has_lines:
                     # Pure bezier path → có thể là circle
                     for item in items:
@@ -396,7 +351,6 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                                 x = mt**3*p1.x+3*mt**2*t*p2.x+3*mt*t**2*p3.x+t**3*p4.x
                                 y = mt**3*p1.y+3*mt**2*t*p2.y+3*mt*t**2*p3.y+t**3*p4.y
                                 all_pts.append(to_dxf(x,y))
-
                 if all_pts:
                     is_circ, cx, cy, r = pts_are_circle(all_pts)
                     if is_circ and r > 0.3:
@@ -404,11 +358,9 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                                        dxfattribs={"layer": layer_name})
                         entities += 1
                         continue  # skip item-by-item processing
-
                 # ── Process items từng cái ────────────────
                 for item in items:
                     itype = item[0]
-
                     if itype == "l":
                         p1, p2 = item[1], item[2]
                         msp.add_line(
@@ -417,7 +369,6 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                             dxfattribs={"layer": layer_name}
                         )
                         entities += 1
-
                     elif itype == "re":
                         rect = item[1]
                         # Chỉ vẽ nếu có stroke (color và width)
@@ -439,11 +390,9 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                             dxfattribs={"layer": layer_name, "closed": True}
                         )
                         entities += 1
-
                     elif itype == "c":
                         # Bezier đơn lẻ → append vào curve_pts để build polyline sau
                         pass  # handled below
-
                     elif itype == "qu":
                         # Quad object: dùng index [0..3] thay vì .x/.y
                         quad = item[1]
@@ -454,7 +403,6 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                             pts = [to_dxf(item[i].x, item[i].y) for i in range(1,5)]
                         msp.add_lwpolyline(pts, dxfattribs={"layer": layer_name, "closed": True})
                         entities += 1
-
                 # Build polylines chỉ từ bezier curve (c) segments
                 # Lines (l) đã được vẽ riêng lẻ ở trên
                 curve_pts = []
@@ -487,7 +435,6 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                 if len(curve_pts) >= 2:
                     msp.add_lwpolyline(curve_pts, dxfattribs={"layer": layer_name})
                     entities += 1
-
             # Text extraction disabled by default — geometry only
             # Enable bằng cách tick "Include text layer" trong UI
             if include_text:
@@ -545,19 +492,14 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                                 entities += 1
                 except Exception:
                     pass
-
             y_offset += ph_u + PAGE_GAP
-
         pdf_doc.close()
-
     finally:
         os.unlink(tmp_path)
-
     stem = Path(filename).stem
     job_id = str(uuid.uuid4())
     out_name = f"{job_id}_{stem}.dxf"
     doc.saveas(str(OUTPUT_DIR / out_name))
-
     return {
         "job_id":   job_id,
         "filename": f"{stem}.dxf",
@@ -565,17 +507,13 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
         "entities": entities,
         "layers":   len(layers),
     }
-
-
 @app.get("/health")
 def health():
     return {"status": "ok", "version": "pymupdf", "time": datetime.utcnow().isoformat()}
-
 @app.get("/usage")
 def check_usage_endpoint(request: Request, pro_key: str = ""):
     ip = get_client_ip(request)
     return check_usage(ip, pro_key)
-
 @app.post("/convert")
 async def convert(
     request: Request,
@@ -589,7 +527,6 @@ async def convert(
 ):
     if not files:
         raise HTTPException(400, "No files")
-
     # Check rate limit
     ip = get_client_ip(request)
     usage = check_usage(ip, pro_key)
@@ -597,7 +534,6 @@ async def convert(
         if usage.get("error"):
             raise HTTPException(403, usage["error"])
         raise HTTPException(429, f"Daily limit reached ({FREE_LIMIT} conversions/day). Upgrade to Pro for unlimited access.")
-
     try:
         scale_f = max(0.001, float(scale))
     except:
@@ -617,11 +553,9 @@ async def convert(
     except Exception as e:
         import traceback
         raise HTTPException(500, f"Conversion failed: {e}\n{traceback.format_exc()}")
-
     # Tính usage sau khi convert thành công
     if not usage["is_pro"]:
         increment_usage(ip)
-
     job_results[result["job_id"]] = result
     remaining_after = max(0, usage.get("remaining", FREE_LIMIT) - 1)
     return {
@@ -630,27 +564,22 @@ async def convert(
         "remaining": remaining_after if not usage["is_pro"] else 999,
         "is_pro": usage["is_pro"]
     }
-
 # ── Admin endpoints ────────────────────────────────────────
-
 # Email config (set trong Railway env vars)
 SMTP_HOST = os.environ.get("SMTP_HOST", "")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_USER = os.environ.get("SMTP_USER", "")
 SMTP_PASS = os.environ.get("SMTP_PASS", "")
 SMTP_FROM = os.environ.get("SMTP_FROM", "noreply@pdf2dxf.io")
-
 # ── PayOS config ──────────────────────────────────────────
 PAYOS_CLIENT_ID   = os.environ.get("PAYOS_CLIENT_ID", "")
 PAYOS_API_KEY     = os.environ.get("PAYOS_API_KEY", "")
 PAYOS_CHECKSUM_KEY = os.environ.get("PAYOS_CHECKSUM_KEY", "")
-
 PRICES = {
     "monthly":  {"amount": 99000,  "usd": 4,  "desc": "pdf2dxf Pro - 1 Month"},
     "yearly":   {"amount": 299000, "usd": 12, "desc": "pdf2dxf Pro - 1 Year"},
     "lifetime": {"amount": 999000, "usd": 39, "desc": "pdf2dxf Pro - Lifetime"},
 }
-
 def payos_create_order(order_code: int, amount: int, description: str, 
                         buyer_email: str, plan: str, return_url: str, cancel_url: str) -> dict:
     """Tạo payment link qua PayOS API"""
@@ -685,7 +614,6 @@ def payos_create_order(order_code: int, amount: int, description: str,
     )
     with urllib.request.urlopen(req, timeout=10) as resp:
         return json.loads(resp.read())
-
 def payos_verify_webhook(data: dict, signature: str) -> bool:
     """Verify webhook signature từ PayOS"""
     import hashlib, hmac
@@ -696,7 +624,6 @@ def payos_verify_webhook(data: dict, signature: str) -> bool:
         PAYOS_CHECKSUM_KEY.encode(), data_str.encode(), hashlib.sha256
     ).hexdigest()
     return expected == signature
-
 def send_key_email(to_email: str, key: str, plan: str, expires_at: str):
     """Gửi email chứa pro key cho khách"""
     if not SMTP_HOST or not SMTP_USER:
@@ -715,20 +642,15 @@ def send_key_email(to_email: str, key: str, plan: str, expires_at: str):
         msg["To"] = to_email
         
         body = f"""Hi,
-
 Thank you for your purchase!
-
 Your Pro Key: {key}
 Plan: {plan_text}
 {expire_text}
-
 How to use:
 1. Go to https://pdf2dxf.io (or our site URL)
 2. Enter your key in the "Pro key" field
 3. Enjoy unlimited conversions!
-
 If you have any questions, reply to this email.
-
 — pdf2dxf Team
 """
         msg.attach(MIMEText(body, "plain"))
@@ -741,7 +663,6 @@ If you have any questions, reply to this email.
     except Exception as e:
         print(f"Email error: {e}")
         return False
-
 @app.post("/admin/create-key")
 def create_key(
     secret: str = Form(...),
@@ -758,7 +679,6 @@ def create_key(
     if email and send_email == "1":
         email_sent = send_key_email(email, result["key"], plan, result.get("expires_at", ""))
     return {**result, "email_sent": email_sent}
-
 @app.get("/admin/list-keys")
 def list_keys(secret: str = ""):
     if secret != ADMIN_SECRET:
@@ -778,7 +698,6 @@ def list_keys(secret: str = ""):
             "expires_at": r[5], "active": r[6], "expired": expired
         })
     return {"keys": result}
-
 @app.post("/admin/revoke-key")
 def revoke_key(secret: str = Form(...), key: str = Form(...)):
     if secret != ADMIN_SECRET:
@@ -788,9 +707,7 @@ def revoke_key(secret: str = Form(...), key: str = Form(...)):
     conn.commit()
     conn.close()
     return {"revoked": key}
-
 # ── PayOS Endpoints ───────────────────────────────────────
-
 @app.post("/payos/create")
 async def payos_create(
     request: Request,
@@ -847,7 +764,6 @@ async def payos_create(
             raise HTTPException(500, f"PayOS error: {result.get('desc', 'Unknown')}")
     except Exception as e:
         raise HTTPException(500, str(e))
-
 @app.post("/webhook/payos")
 async def payos_webhook(request: Request):
     """PayOS webhook — tự động tạo key khi thanh toán thành công"""
@@ -896,7 +812,6 @@ async def payos_webhook(request: Request):
     except Exception as e:
         print(f"PayOS webhook error: {e}")
         return {"status": "error", "detail": str(e)}
-
 @app.post("/webhook/paypal")
 async def paypal_webhook(request: Request):
     """PayPal IPN/Webhook — tự động tạo key khi có payment"""
@@ -937,7 +852,6 @@ async def paypal_webhook(request: Request):
     except Exception as e:
         print(f"PayPal webhook error: {e}")
         return {"status": "error"}
-
 @app.get("/admin/stats")
 def stats(secret: str = ""):
     if secret != ADMIN_SECRET:
@@ -949,8 +863,6 @@ def stats(secret: str = ""):
     total_keys  = conn.execute("SELECT COUNT(*) FROM pro_keys WHERE active=1").fetchone()[0]
     conn.close()
     return {"today": today_total, "week": week_total, "active_pro_keys": total_keys}
-
-
 @app.post("/detect-scale")
 async def detect_scale(files: list[UploadFile] = File(...)):
     """Auto-detect scale từ dimension text dùng PyMuPDF"""
@@ -966,7 +878,6 @@ async def detect_scale(files: list[UploadFile] = File(...)):
         page = pdf[0]
         ph = page.rect.height
         PT_TO_MM = 25.4 / 72
-
         # Extract lines và text từ page đầu
         lines_data = []
         for path in page.get_drawings():
@@ -978,7 +889,6 @@ async def detect_scale(files: list[UploadFile] = File(...)):
                         mx = (p1.x + p2.x) / 2
                         my = (p1.y + p2.y) / 2
                         lines_data.append({"mx": mx, "my": my, "length_mm": length_mm})
-
         DIM_RE = _re.compile(r'^(\d{2,5}(?:[.,]\d{1,2})?)$')
         texts_data = []
         blocks = page.get_text("dict")
@@ -997,7 +907,6 @@ async def detect_scale(files: list[UploadFile] = File(...)):
                                 "x": (bbox[0]+bbox[2])/2,
                                 "y": (bbox[1]+bbox[3])/2,
                             })
-
         candidates = []
         for t in texts_data:
             for l in lines_data:
@@ -1006,11 +915,9 @@ async def detect_scale(files: list[UploadFile] = File(...)):
                     ratio = t["val"] / l["length_mm"]
                     if 0.5 <= ratio <= 5000:
                         candidates.append(ratio)
-
         pdf.close()
         if not candidates:
             return {"scale": 1.0, "detected": False, "confidence": "none"}
-
         candidates.sort()
         median = candidates[len(candidates)//2]
         STANDARD = [1,2,5,10,20,25,50,100,200,250,500,1000,2500,5000]
@@ -1021,7 +928,6 @@ async def detect_scale(files: list[UploadFile] = File(...)):
         else:
             final = median
             conf = "medium"
-
         return {
             "scale": final,
             "detected": True,
@@ -1032,7 +938,6 @@ async def detect_scale(files: list[UploadFile] = File(...)):
         return {"scale": 1.0, "detected": False, "confidence": "none", "error": str(e)}
     finally:
         os.unlink(tmp_path)
-
 @app.get("/status/{job_id}")
 def status(job_id: str):
     if job_id in job_results:
@@ -1040,7 +945,6 @@ def status(job_id: str):
         return {"status":"done","job_id":job_id,
                 "filename":r["filename"],"entities":r["entities"],"layers":r["layers"]}
     return {"status":"error","message":"Job not found"}
-
 @app.get("/download/{job_id}")
 def download(job_id: str):
     if job_id not in job_results:
