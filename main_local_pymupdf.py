@@ -1,3 +1,4 @@
+"""
 PDF to DXF — PyMuPDF version
 Dùng page.get_drawings() để lấy đầy đủ: color, fill, dashes, linewidth, path type
 """
