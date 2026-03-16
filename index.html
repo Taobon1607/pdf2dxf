@@ -6,10 +6,8 @@
 <title>PDF to DXF — CAD-Quality Converter for Engineers</title>
 <meta name="description" content="Convert PDF to DXF online. Preserves vector lines, layers, text and lineweights. Built for engineers and CAD professionals.">
 <meta name="keywords" content="pdf to dxf, pdf to dxf online free, convert pdf to dxf, pdf to autocad, pdf to dwg">
-
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
-
 <style>
   :root {
     --bg:        #0d0d14;
@@ -23,11 +21,8 @@
     --error:     #ff4060;
     --grid:      rgba(0,229,255,0.04);
   }
-
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   html { scroll-behavior: smooth; }
-
   body {
     background: var(--bg);
     color: var(--text);
@@ -35,7 +30,6 @@
     min-height: 100vh;
     overflow-x: hidden;
   }
-
   /* Grid background */
   body::before {
     content: '';
@@ -48,7 +42,6 @@
     pointer-events: none;
     z-index: 0;
   }
-
   /* Glow orbs */
   .orb {
     position: fixed;
@@ -60,10 +53,8 @@
   }
   .orb-1 { width: 600px; height: 600px; background: var(--accent); top: -200px; right: -100px; }
   .orb-2 { width: 400px; height: 400px; background: var(--accent2); bottom: 10%; left: -100px; }
-
   /* Layout */
   .container { max-width: 900px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
-
   /* Header */
   header {
     padding: 28px 0;
@@ -72,7 +63,6 @@
     justify-content: space-between;
     border-bottom: 1px solid var(--border);
   }
-
   .logo {
     font-family: 'Space Mono', monospace;
     font-size: 18px;
@@ -80,7 +70,6 @@
     letter-spacing: -0.5px;
   }
   .logo span { color: var(--muted); }
-
   nav a {
     color: var(--muted);
     text-decoration: none;
@@ -91,13 +80,11 @@
     margin-left: 28px;
   }
   nav a:hover { color: var(--text); }
-
   /* Hero */
   .hero {
     padding: 72px 0 48px;
     text-align: center;
   }
-
   .badge {
     display: inline-flex;
     align-items: center;
@@ -120,12 +107,10 @@
     background: var(--accent);
     animation: pulse 2s infinite;
   }
-
   @keyframes pulse {
     0%, 100% { opacity: 1; transform: scale(1); }
     50% { opacity: 0.4; transform: scale(0.8); }
   }
-
   h1 {
     font-size: clamp(40px, 7vw, 72px);
     font-weight: 800;
@@ -135,7 +120,6 @@
   }
   h1 .line-accent { color: var(--accent); }
   h1 .line-dim { color: var(--muted); font-weight: 400; }
-
   .hero-sub {
     font-size: 17px;
     color: var(--muted);
@@ -144,7 +128,6 @@
     line-height: 1.7;
     font-weight: 400;
   }
-
   /* Stats bar */
   .stats {
     display: flex;
@@ -167,7 +150,6 @@
     letter-spacing: 0.08em;
     margin-top: 2px;
   }
-
   /* Upload zone */
   .upload-card {
     background: var(--surface);
@@ -186,7 +168,6 @@
     background: linear-gradient(90deg, transparent, var(--accent), transparent);
     opacity: 0.5;
   }
-
   .drop-zone {
     border: 2px dashed var(--border);
     border-radius: 12px;
@@ -201,14 +182,12 @@
     background: rgba(0,229,255,0.04);
   }
   .drop-zone.drag-over { transform: scale(1.01); }
-
   .drop-icon {
     width: 56px; height: 56px;
     margin: 0 auto 20px;
     position: relative;
   }
   .drop-icon svg { width: 100%; height: 100%; }
-
   .drop-title {
     font-size: 18px;
     font-weight: 600;
@@ -220,9 +199,7 @@
     line-height: 1.6;
   }
   .drop-sub strong { color: var(--text); }
-
   #fileInput { display: none; }
-
   /* Options row */
   .options-row {
     display: grid;
@@ -230,7 +207,6 @@
     gap: 16px;
     margin-top: 24px;
   }
-
   .option-group label {
     display: block;
     font-size: 11px;
@@ -240,7 +216,6 @@
     margin-bottom: 8px;
     font-family: 'Space Mono', monospace;
   }
-
   select, input[type="text"] {
     width: 100%;
     background: var(--bg);
@@ -256,7 +231,6 @@
     -webkit-appearance: none;
   }
   select:focus, input:focus { border-color: var(--accent); }
-
   /* Convert button */
   .btn-convert {
     width: 100%;
@@ -281,7 +255,6 @@
   .btn-convert:hover { background: #33ecff; transform: translateY(-1px); box-shadow: 0 8px 32px rgba(0,229,255,0.3); }
   .btn-convert:active { transform: translateY(0); }
   .btn-convert:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; box-shadow: none; }
-
   /* File queue */
   .file-queue { margin-top: 20px; display: none; }
   .file-item {
@@ -304,7 +277,6 @@
   .file-size { color: var(--muted); font-size: 11px; font-family: 'Space Mono', monospace; }
   .file-remove { color: var(--muted); cursor: pointer; transition: color 0.2s; font-size: 18px; line-height: 1; }
   .file-remove:hover { color: var(--error); }
-
   /* Progress */
   .progress-wrap { display: none; margin-top: 28px; }
   .progress-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 13px; font-family: 'Space Mono', monospace; }
@@ -324,7 +296,6 @@
     transition: width 0.3s ease;
   }
   .progress-status { margin-top: 10px; font-size: 12px; color: var(--muted); font-family: 'Space Mono', monospace; }
-
   /* Result */
   .result-card {
     display: none;
@@ -354,7 +325,6 @@
     transition: all 0.2s;
   }
   .btn-download:hover { background: #33ffb5; transform: translateY(-1px); }
-
   /* Error */
   .error-card {
     display: none;
@@ -367,7 +337,6 @@
     color: var(--error);
     font-family: 'Space Mono', monospace;
   }
-
   /* Usage indicator */
   .usage-bar-wrap {
     display: flex;
@@ -399,7 +368,6 @@
     transition: all 0.2s;
   }
   .btn-pro:hover { background: #ff8c5f; }
-
   /* AdSense placeholder */
   .ad-slot {
     background: var(--surface);
@@ -419,7 +387,6 @@
     justify-content: center;
   }
   /* Replace above with real AdSense ins tag */
-
   /* Features */
   .features { padding: 64px 0; }
   .section-label {
@@ -431,9 +398,7 @@
     margin-bottom: 16px;
   }
   .section-title { font-size: 32px; font-weight: 800; letter-spacing: -1px; margin-bottom: 48px; }
-
   .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-
   .feature-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -453,7 +418,6 @@
     transition: opacity 0.3s;
   }
   .feature-card:hover::after { opacity: 1; }
-
   .feature-icon {
     width: 40px; height: 40px;
     background: rgba(0,229,255,0.08);
@@ -466,7 +430,6 @@
   }
   .feature-title { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
   .feature-desc { font-size: 13px; color: var(--muted); line-height: 1.6; font-weight: 400; }
-
   /* Comparison table */
   .compare { padding: 48px 0 64px; }
   .compare-table {
@@ -497,11 +460,9 @@
   .check { color: var(--success); font-size: 16px; }
   .cross { color: var(--muted); }
   .partial { color: var(--accent2); }
-
   /* Pricing */
   .pricing { padding: 48px 0 80px; }
   .pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 600px; margin: 0 auto; }
-
   .plan-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -559,7 +520,6 @@
   .btn-plan-free:hover { background: #2a2a3e; }
   .btn-plan-pro { background: var(--accent); color: #000; }
   .btn-plan-pro:hover { background: #33ecff; transform: translateY(-1px); }
-
   /* Footer */
   footer {
     border-top: 1px solid var(--border);
@@ -571,7 +531,6 @@
   }
   footer a { color: var(--muted); text-decoration: none; margin: 0 12px; }
   footer a:hover { color: var(--text); }
-
   /* Responsive */
   @media (max-width: 640px) {
     .options-row { grid-template-columns: 1fr; }
@@ -581,7 +540,6 @@
     .stats { gap: 24px; }
     nav { display: none; }
   }
-
   /* Spinner */
   @keyframes spin { to { transform: rotate(360deg); } }
   .spinner {
@@ -597,7 +555,6 @@
 <body>
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
-
 <!-- Header -->
 <div class="container">
   <header>
@@ -609,7 +566,6 @@
     </nav>
   </header>
 </div>
-
 <!-- Hero -->
 <div class="container">
   <section class="hero">
@@ -629,10 +585,8 @@
       <div class="stat"><span class="stat-num">0</span><span class="stat-label">Signups needed</span></div>
     </div>
   </section>
-
   <!-- Upload Card -->
   <div class="upload-card">
-
     <!-- Drop Zone -->
     <div class="drop-zone" id="dropZone">
       <div class="drop-icon">
@@ -651,10 +605,8 @@
       </div>
       <input type="file" id="fileInput" accept=".pdf" multiple>
     </div>
-
     <!-- File Queue -->
     <div class="file-queue" id="fileQueue"></div>
-
     <!-- Options -->
     <div style="display:flex;gap:16px;margin-top:16px;flex-wrap:wrap;">
       <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);cursor:pointer;font-family:Space Mono,monospace;">
@@ -704,13 +656,11 @@
         </select>
       </div>
     </div>
-
     <!-- Convert Button -->
     <button class="btn-convert" id="btnConvert" disabled>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       Convert to DXF
     </button>
-
     <!-- Progress -->
     <div class="progress-wrap" id="progressWrap">
       <div class="progress-header">
@@ -720,7 +670,6 @@
       <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
       <div class="progress-status" id="progressStatus">Detecting PDF type…</div>
     </div>
-
     <!-- Result -->
     <div class="result-card" id="resultCard">
       <div class="result-title">✓ Conversion complete</div>
@@ -730,16 +679,13 @@
         Download DXF
       </a>
     </div>
-
     <!-- Error -->
     <div class="error-card" id="errorCard"></div>
-
     <!-- Usage -->
     <div class="usage-bar-wrap" id="usageWrap">
       <span class="usage-text" id="usageText"><strong id="usageCount">5</strong> free conversions remaining today</span>
       <button class="btn-pro" onclick="scrollToPricing()">Upgrade Pro →</button>
     </div>
-
     <!-- Pro Key input -->
     <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
       <input type="text" id="proKeyInput" placeholder="Pro key (optional)"
@@ -748,15 +694,12 @@
         oninput="onProKeyChange(this.value)">
       <span id="proKeyStatus" style="font-size:11px;color:var(--muted)"></span>
     </div>
-
   </div><!-- /upload-card -->
-
   <!-- AdSense slot -->
   <div class="ad-slot" id="adSlot">
     <!-- Replace with: <ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-XXXXXXXX" data-ad-slot="XXXXXXXX" data-ad-format="auto"></ins> -->
     Ad · 728×90
   </div>
-
   <!-- Features -->
   <section class="features" id="features">
     <div class="section-label">Why it's different</div>
@@ -794,7 +737,6 @@
       </div>
     </div>
   </section>
-
   <!-- Comparison -->
   <section class="compare" id="compare">
     <div class="section-label">Honest comparison</div>
@@ -862,7 +804,6 @@
       </tbody>
     </table>
   </section>
-
   <!-- Pricing -->
   <section class="pricing" id="pricing">
     <div class="section-label" style="text-align:center">Pricing</div>
@@ -898,11 +839,9 @@
       </div>
     </div>
   </section>
-
   <!-- Payment Modal -->
   <div id="paymentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;align-items:center;justify-content:center;padding:16px">
     <div style="background:#16161f;border:1px solid #2a2a3e;border-radius:16px;width:480px;max-width:100%;max-height:90vh;overflow-y:auto;position:relative">
-
       <!-- Header -->
       <div style="padding:28px 28px 0;display:flex;justify-content:space-between;align-items:start">
         <div>
@@ -911,10 +850,8 @@
         </div>
         <button onclick="closePaymentModal()" style="background:none;border:none;color:#9090b0;font-size:22px;cursor:pointer;padding:4px">✕</button>
       </div>
-
       <!-- Plan selector -->
       <div style="padding:20px 28px 0;display:grid;gap:10px" id="planCards">
-
         <div class="plan-card" data-plan="monthly" onclick="selectPlan('monthly')"
           style="border:1px solid #2a2a3e;border-radius:10px;padding:16px;cursor:pointer;display:flex;align-items:center;gap:14px">
           <div style="flex:1">
@@ -926,7 +863,6 @@
             <div style="font-size:11px;color:#9090b0">/month</div>
           </div>
         </div>
-
         <div class="plan-card selected-plan" data-plan="yearly" onclick="selectPlan('yearly')"
           style="border:2px solid #00e5ff;border-radius:10px;padding:16px;cursor:pointer;display:flex;align-items:center;gap:14px;position:relative">
           <div style="position:absolute;top:-10px;left:16px;background:#ff6b35;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px">BEST VALUE — SAVE 75%</div>
@@ -939,7 +875,6 @@
             <div style="font-size:11px;color:#9090b0">/year</div>
           </div>
         </div>
-
         <div class="plan-card" data-plan="lifetime" onclick="selectPlan('lifetime')"
           style="border:1px solid #2a2a3e;border-radius:10px;padding:16px;cursor:pointer;display:flex;align-items:center;gap:14px">
           <div style="flex:1">
@@ -951,9 +886,7 @@
             <div style="font-size:11px;color:#9090b0">one-time</div>
           </div>
         </div>
-
       </div>
-
       <!-- Email -->
       <div style="padding:20px 28px 0">
         <label style="font-size:12px;color:#9090b0;display:block;margin-bottom:6px">YOUR EMAIL — we'll send your key here</label>
@@ -961,7 +894,6 @@
           style="width:100%;padding:12px 14px;background:#0d0d14;border:1px solid #2a2a3e;border-radius:8px;
                  color:#f0f0f8;font-size:14px">
       </div>
-
       <!-- Payment method -->
       <div style="padding:20px 28px 0">
         <button id="btnPay" onclick="startPayment()"
@@ -978,11 +910,9 @@
           Secured by PayOS · Key auto-delivered to your email
         </p>
       </div>
-
       <div style="height:24px"></div>
     </div>
   </div>
-
   <footer>
     <div style="margin-bottom:16px">
       <a href="#">Privacy</a>
@@ -991,9 +921,7 @@
     </div>
     © 2025 pdf2dxf.io — Built for engineers
   </footer>
-
 </div><!-- /container -->
-
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ─── State ───────────────────────────────────────────────
 const RAILWAY_URL = 'https://web-production-f7ee7.up.railway.app';
@@ -1004,7 +932,6 @@ let files = [];
 let usageRemaining = 5;
 let isPro = false;
 let proKey = '';
-
 // Load usage on page start
 async function loadUsage() {
   try {
@@ -1016,10 +943,11 @@ async function loadUsage() {
     updateUsageUI(data);
   } catch(e) {}
 }
-
 function updateUsageUI(data) {
-  isPro = data.is_pro || false;
-  usageRemaining = data.remaining ?? 5;
+  if (data) {
+    isPro = data.is_pro || false;
+    usageRemaining = data.remaining ?? 5;
+  }
   const countEl = document.getElementById('usageCount');
   const textEl = document.getElementById('usageText');
   const wrapEl = document.getElementById('usageWrap');
@@ -1034,7 +962,6 @@ function updateUsageUI(data) {
     wrapEl.querySelector('.btn-pro').style.display = '';
   }
 }
-
 async function onProKeyChange(val) {
   proKey = val.trim();
   localStorage.setItem('proKey', proKey);
@@ -1053,14 +980,11 @@ async function onProKeyChange(val) {
     }
   } catch(e) {}
 }
-
 loadUsage();
 updateUsageUI();
-
 // ─── Drop zone ───────────────────────────────────────────
 const dropZone = document.getElementById('dropZone');
 const fileInput = document.getElementById('fileInput');
-
 dropZone.addEventListener('click', () => fileInput.click());
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
@@ -1070,7 +994,6 @@ dropZone.addEventListener('drop', e => {
   handleFiles([...e.dataTransfer.files]);
 });
 fileInput.addEventListener('change', () => handleFiles([...fileInput.files]));
-
 function handleFiles(newFiles) {
   const pdfs = newFiles.filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf'));
   if (!pdfs.length) return;
@@ -1080,7 +1003,6 @@ function handleFiles(newFiles) {
   hideResultError();
   autoDetectScale(files[0]);
 }
-
 async function autoDetectScale(file) {
   const scaleHint = document.getElementById('scaleHint');
   if (scaleHint) scaleHint.textContent = '⏳ Detecting scale...';
@@ -1109,7 +1031,6 @@ async function autoDetectScale(file) {
     if (scaleHint) scaleHint.textContent = '';
   }
 }
-
 function renderQueue() {
   const queue = document.getElementById('fileQueue');
   if (!files.length) { queue.style.display = 'none'; return; }
@@ -1122,33 +1043,27 @@ function renderQueue() {
       <span class="file-remove" onclick="removeFile(${i})">×</span>
     </div>`).join('');
 }
-
 function removeFile(i) {
   files.splice(i, 1);
   renderQueue();
   if (!files.length) document.getElementById('btnConvert').disabled = true;
 }
-
 // ─── Convert ─────────────────────────────────────────────
 document.getElementById('btnConvert').addEventListener('click', startConvert);
-
 async function startConvert() {
   if (!files.length) return;
   if (usageRemaining <= 0) { scrollToPricing(); return; }
-
   const btn = document.getElementById('btnConvert');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Converting…';
   hideResultError();
   showProgress();
-
   // Get scale value — priority: detected > custom input > select
   let scaleValue = document.getElementById('optScale').value;
   if (scaleValue === 'custom') {
     const customVal = document.getElementById('customScale').value;
     scaleValue = customVal || (window._detectedScale ? window._detectedScale : '1');
   }
-
   const formData = new FormData();
   files.forEach(f => formData.append('files', f));
   formData.append('version', document.getElementById('optVersion').value);
@@ -1157,20 +1072,16 @@ async function startConvert() {
   formData.append('include_text', document.getElementById('optIncludeText').checked ? '1' : '0');
   formData.append('include_hatch', document.getElementById('optIncludeHatch').checked ? '1' : '0');
   formData.append('pro_key', proKey || '');
-
   try {
     setProgress(10, 'Uploading file…');
-
     const uploadRes = await fetch(`${API_BASE}/convert`, {
       method: 'POST',
       body: formData
     });
-
     if (!uploadRes.ok) {
       const err = await uploadRes.json();
       throw new Error(err.detail || 'Upload failed');
     }
-
     const uploadData = await uploadRes.json();
     const { job_id } = uploadData;
     // Update remaining count after successful convert
@@ -1180,16 +1091,13 @@ async function startConvert() {
       if (countEl) countEl.textContent = usageRemaining;
     }
     setProgress(30, 'Analysing PDF structure…');
-
     // Poll status
     await pollStatus(job_id);
-
   } catch (err) {
     showError(err.message);
     resetBtn();
   }
 }
-
 async function pollStatus(jobId) {
   const statuses = [
     [40, 'Detecting vector paths…'],
@@ -1199,24 +1107,19 @@ async function pollStatus(jobId) {
     [90, 'Finalising output file…'],
   ];
   let statusIdx = 0;
-
   return new Promise((resolve, reject) => {
     const interval = setInterval(async () => {
       try {
         const res = await fetch(`${API_BASE}/status/${jobId}`);
         const data = await res.json();
-
         if (statusIdx < statuses.length) {
           const [pct, label] = statuses[statusIdx++];
           setProgress(pct, label);
         }
-
         if (data.status === 'done') {
           clearInterval(interval);
           setProgress(100, 'Done!');
-
           // Local mode: no usage decrement
-
           setTimeout(() => {
             showResult(data);
             resetBtn();
@@ -1235,7 +1138,6 @@ async function pollStatus(jobId) {
     }, 1500);
   });
 }
-
 // ─── Progress ─────────────────────────────────────────────
 function showProgress() {
   document.getElementById('progressWrap').style.display = 'block';
@@ -1247,7 +1149,6 @@ function setProgress(pct, label) {
   document.getElementById('progressLabel').textContent = label;
 }
 function hideProgress() { document.getElementById('progressWrap').style.display = 'none'; }
-
 // ─── Result / Error ───────────────────────────────────────
 function showResult(data) {
   hideProgress();
@@ -1258,35 +1159,27 @@ function showResult(data) {
   link.href = `${API_BASE}/download/${data.job_id}`;
   link.download = data.filename;
 }
-
 function showError(msg) {
   hideProgress();
   const card = document.getElementById('errorCard');
   card.style.display = 'block';
   card.textContent = '⚠ ' + msg;
 }
-
 function hideResultError() {
   document.getElementById('resultCard').style.display = 'none';
   document.getElementById('errorCard').style.display = 'none';
   hideProgress();
 }
-
 function resetBtn() {
   const btn = document.getElementById('btnConvert');
   btn.disabled = false;
   btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg> Convert to DXF';
 }
-
 // ─── Usage ────────────────────────────────────────────────
-function updateUsageUI() {
-  document.getElementById('usageWrap').style.display = 'none';
-}
-
+// Removed duplicate updateUsageUI that was breaking the real one
 function scrollToPricing() {
   document.getElementById('pricing').scrollIntoView({ behavior: 'smooth' });
 }
-
 function toggleCustomScale(val) {
   const inp = document.getElementById('customScale');
   if (val === 'custom') {
@@ -1297,7 +1190,6 @@ function toggleCustomScale(val) {
     window._detectedScale = null;
   }
 }
-
 // ── Payment Modal ─────────────────────────────────────────
 const PLAN_INFO = {
   monthly:  { usd: '$4',  vnd: '99.000 VNĐ',   label: 'Monthly'  },
@@ -1305,7 +1197,6 @@ const PLAN_INFO = {
   lifetime: { usd: '$39', vnd: '999.000 VNĐ',  label: 'Lifetime' },
 };
 let selectedPlan = 'yearly';
-
 function openPaymentModal() {
   document.getElementById('paymentModal').style.display = 'flex';
   selectPlan('yearly');
@@ -1313,7 +1204,6 @@ function openPaymentModal() {
 function closePaymentModal() {
   document.getElementById('paymentModal').style.display = 'none';
 }
-
 function selectPlan(plan) {
   selectedPlan = plan;
   document.querySelectorAll('.plan-card').forEach(el => {
@@ -1324,9 +1214,7 @@ function selectPlan(plan) {
   document.getElementById('vn-amount').textContent = PLAN_INFO[plan]?.vnd || '';
   document.getElementById('vn-note').textContent = `pdf2dxf ${plan}`;
 }
-
 document.getElementById('btnUpgrade').addEventListener('click', openPaymentModal);
-
 async function startPayment() {
   const email = document.getElementById('payEmail').value.trim();
   if (!email || !email.includes('@')) {
@@ -1355,11 +1243,15 @@ async function startPayment() {
     btn.textContent = 'Pay with Card / MoMo / QR →';
   }
 }
-
 // Xử lý redirect sau thanh toán
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('payment') === 'success') {
   const email = urlParams.get('email') || '';
   setTimeout(() => {
     alert(`✓ Payment successful!\n\nYour Pro key has been sent to:\n${email}\n\nCheck your inbox (and spam folder).`);
-    window.histor
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }, 500);
+}
+</script>
+</body>
+</html>
