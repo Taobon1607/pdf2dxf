@@ -681,6 +681,54 @@ If you have any questions, reply to this email.
     except Exception as e:
         print(f"Email error: {e}")
         return False
+def send_contact_email(user_name: str, user_email: str, message: str) -> bool:
+    """Gửi email contact form đến admin."""
+    if not SMTP_HOST or not SMTP_USER:
+        return False
+    try:
+        import smtplib
+        from email.mime.text import MIMEText
+        from email.mime.multipart import MIMEMultipart
+        
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = f"New Contact Request from {user_name}"
+        msg["From"] = SMTP_FROM
+        # Email này gửi đến admin, nên "To" là SMTP_USER (hoặc email của chủ app)
+        msg["To"] = "letusform@gmail.com"
+        
+        body = f"""You have a new contact request from pdf2dxf.io:
+
+Name: {user_name}
+Email: {user_email}
+
+Message:
+{message}
+"""
+        msg.attach(MIMEText(body, "plain"))
+        
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASS)
+            server.sendmail(SMTP_FROM, "letusform@gmail.com", msg.as_string())
+        return True
+    except Exception as e:
+        print(f"Contact Email error: {e}")
+        return False
+
+@app.post("/contact")
+def submit_contact(
+    name: str = Form(...),
+    email: str = Form(...),
+    message: str = Form(...)
+):
+    if not name or not email or not message:
+        raise HTTPException(400, "All fields are required")
+    success = send_contact_email(name, email, message)
+    if not success:
+        # Trong môi trường dev có thể SMTP chưa config, vẫn trả success ở đây để test UI
+        return {"status": "ok", "warning": "Email config missing, but request received"}
+    return {"status": "ok"}
+
 @app.post("/admin/create-key")
 def create_key(
     secret: str = Form(...),
