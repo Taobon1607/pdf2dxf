@@ -715,15 +715,62 @@ Message:
         print(f"Contact Email error: {e}")
         return False
 
+CONTACT_DAILY_LIMIT = 3  # Tối đa 3 lần liên hệ mỗi IP/ngày
+
+def check_contact_rate(ip: str) -> bool:
+    """Trả True nếu IP còn quota, False nếu đã vượt giới hạn."""
+    today = date.today().isoformat()
+    conn = get_db()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS contact_rate (
+            ip TEXT NOT NULL,
+            day TEXT NOT NULL,
+            count INTEGER DEFAULT 0,
+            PRIMARY KEY (ip, day)
+        )
+    """)
+    conn.commit()
+    row = conn.execute(
+        "SELECT count FROM contact_rate WHERE ip=? AND day=?", (ip, today)
+    ).fetchone()
+    count = row[0] if row else 0
+    conn.close()
+    return count < CONTACT_DAILY_LIMIT
+
+def increment_contact_rate(ip: str):
+    today = date.today().isoformat()
+    conn = get_db()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS contact_rate (
+            ip TEXT NOT NULL,
+            day TEXT NOT NULL,
+            count INTEGER DEFAULT 0,
+            PRIMARY KEY (ip, day)
+        )
+    """)
+    conn.execute("""
+        INSERT INTO contact_rate (ip, day, count) VALUES (?, ?, 1)
+        ON CONFLICT(ip, day) DO UPDATE SET count = count + 1
+    """, (ip, today))
+    conn.commit()
+    conn.close()
+
 @app.post("/contact")
 def submit_contact(
+    request: Request,
     name: str = Form(...),
     email: str = Form(...),
     message: str = Form(...)
 ):
     if not name or not email or not message:
         raise HTTPException(400, "All fields are required")
+    # Rate limiting: tối đa 3 lần/IP/ngày
+    ip = get_client_ip(request)
+    if not check_contact_rate(ip):
+        raise HTTPException(429, f"Too many contact requests. Maximum {CONTACT_DAILY_LIMIT} per day per IP.")
     success = send_contact_email(name, email, message)
+    # Tăng counter dù email có được gửi hay không (tránh brute force)
+    increment_contact_rate(ip)
     if not success:
         # Trong môi trường dev có thể SMTP chưa config, vẫn trả success ở đây để test UI
         return {"status": "ok", "warning": "Email config missing, but request received"}
