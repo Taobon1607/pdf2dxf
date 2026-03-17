@@ -25,11 +25,11 @@ VERSION_MAP = {
     "R2007":"AC1021","R2010":"AC1024","R2013":"AC1027","R2018":"AC1032",
 }
 
-LW_BUCKETS = [0.09,0.13,0.18,0.20,0.25,0.30,0.35,0.40,0.50,0.53,0.60,0.70,0.80,0.90,1.00]
-
-def snap_lineweight(w_pts: float) -> float:
+def snap_lineweight(w_pts: float) -> int:
     w_mm = w_pts * 0.3528
-    return min(LW_BUCKETS, key=lambda lw: abs(lw - w_mm))
+    buckets = [0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90, 100, 106, 120, 140, 158, 200, 211]
+    lw_100mm = round(w_mm * 100)
+    return min(buckets, key=lambda x: abs(x - lw_100mm))
 
 @celery_app.task(bind=True, name="convert_task")
 def convert_task(self, job_id: str, file_data_list: list, version: str, scale: float, units: str):
@@ -37,6 +37,11 @@ def convert_task(self, job_id: str, file_data_list: list, version: str, scale: f
 
     dxf_version = VERSION_MAP.get(version, "AC1024")
     doc = ezdxf.new(dxf_version)
+    if "Arial" not in doc.styles:
+        try:
+            doc.styles.new("Arial", dxfattribs={"font": "arial.ttf"})
+        except Exception:
+            pass
     msp = doc.modelspace()
 
     total_entities = 0
@@ -93,6 +98,10 @@ def process_vector_pdf(pdf_path: str, doc, msp, scale: float, units: str, task) 
 
         def process_element(element, layer_name="0"):
             nonlocal entities
+            
+            dxf_lw = 0
+            if hasattr(element, "linewidth"):
+                dxf_lw = snap_lineweight(getattr(element, "linewidth", 0) or 0)
 
             if isinstance(element, LTLine):
                 layer = ensure_layer(doc, layer_name, layers)
@@ -100,7 +109,7 @@ def process_vector_pdf(pdf_path: str, doc, msp, scale: float, units: str, task) 
                 y1 = (page_height - element.y0) * mult
                 x2 = element.x1 * mult
                 y2 = (page_height - element.y1) * mult
-                msp.add_line((x1, y1), (x2, y2), dxfattribs={"layer": layer})
+                msp.add_line((x1, y1), (x2, y2), dxfattribs={"layer": layer, "lineweight": dxf_lw})
                 entities += 1
 
             elif isinstance(element, LTRect):
@@ -110,14 +119,14 @@ def process_vector_pdf(pdf_path: str, doc, msp, scale: float, units: str, task) 
                 x1 = element.x1 * mult
                 y1 = (page_height - element.y1) * mult
                 pts = [(x0,y0),(x1,y0),(x1,y1),(x0,y1),(x0,y0)]
-                msp.add_lwpolyline(pts, dxfattribs={"layer": layer, "closed": True})
+                msp.add_lwpolyline(pts, dxfattribs={"layer": layer, "closed": True, "lineweight": dxf_lw})
                 entities += 1
 
             elif isinstance(element, LTCurve):
                 layer = ensure_layer(doc, layer_name, layers)
                 pts = [(seg[0]*mult, (page_height-seg[1])*mult) for seg in element.pts]
                 if len(pts) >= 2:
-                    msp.add_lwpolyline(pts, dxfattribs={"layer": layer})
+                    msp.add_lwpolyline(pts, dxfattribs={"layer": layer, "lineweight": dxf_lw})
                     entities += 1
 
             elif isinstance(element, (LTTextBox, LTTextLine)):
@@ -128,7 +137,7 @@ def process_vector_pdf(pdf_path: str, doc, msp, scale: float, units: str, task) 
                 x = element.x0 * mult
                 y = (page_height - element.y0) * mult
                 font_h = max(0.5, (element.height * mult * 0.7) if hasattr(element, "height") else 2.5)
-                msp.add_text(txt, dxfattribs={"layer": layer, "height": font_h, "insert": (x, y)})
+                msp.add_text(txt, dxfattribs={"layer": layer, "height": font_h, "insert": (x, y), "style": "Arial", "width": 0.85})
                 entities += 1
 
             elif isinstance(element, LTFigure):
