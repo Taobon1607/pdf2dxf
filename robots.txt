@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://taobon1607.github.io/pdf2dxf/sitemap.xml
