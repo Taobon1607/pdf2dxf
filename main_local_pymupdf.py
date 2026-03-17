@@ -229,6 +229,13 @@ def pts_are_circle(pts_2d):
     variance = sum((r-r_avg)**2 for r in radii) / len(radii)
     cv = math.sqrt(variance) / r_avg
     return (cv < 0.04), cx, cy, r_avg
+def get_dxf_lineweight(lw_pts: float) -> int:
+    """Chuyển đổi lineweight từ points (PDF) sang DXF lineweight (1/100 mm)"""
+    lw_mm = lw_pts * 0.3528
+    buckets = [0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90, 100, 106, 120, 140, 158, 200, 211]
+    lw_100mm = round(lw_mm * 100)
+    return min(buckets, key=lambda x: abs(x - lw_100mm))
+
 def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
     import fitz  # PyMuPDF
     import ezdxf
@@ -238,6 +245,11 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
     include_hatch = opts.get("include_hatch", True)
     dxf_version = VERSION_MAP.get(version, "AC1024")
     doc = ezdxf.new(dxf_version)
+    if "Arial" not in doc.styles:
+        try:
+            doc.styles.new("Arial", dxfattribs={"font": "arial.ttf"})
+        except Exception:
+            pass
     msp = doc.modelspace()
     # Set DXF units header (4=mm, 1=inch, 6=m)
     unit_code = {"mm": 4, "cm": 5, "m": 6, "inch": 1}.get(units, 4)
@@ -329,6 +341,7 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                 fill_color   = path.get("fill")     # RGB tuple hoặc None
                 lw_pt        = path.get("width", 0) or 0
                 lw_mm        = lw_pt * 0.3528
+                dxf_lw       = get_dxf_lineweight(lw_pt)
                 dashes       = path.get("dashes")   # string dash pattern
                 is_dashed = bool(dashes and dashes.strip() not in ("", "[]", "[0]"))
                 layer_name = color_to_layer(stroke_color, fill_color, lw_mm, is_dashed)
@@ -356,7 +369,7 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                     is_circ, cx, cy, r = pts_are_circle(all_pts)
                     if is_circ and r > 0.3:
                         msp.add_circle(center=(cx,cy), radius=r,
-                                       dxfattribs={"layer": layer_name})
+                                       dxfattribs={"layer": layer_name, "lineweight": dxf_lw})
                         entities += 1
                         continue  # skip item-by-item processing
                 # ── Process items từng cái ────────────────
@@ -367,7 +380,7 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                         msp.add_line(
                             to_dxf(p1.x, p1.y),
                             to_dxf(p2.x, p2.y),
-                            dxfattribs={"layer": layer_name}
+                            dxfattribs={"layer": layer_name, "lineweight": dxf_lw}
                         )
                         entities += 1
                     elif itype == "re":
@@ -388,7 +401,7 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                         ymin,ymax = min(ys),max(ys)
                         msp.add_lwpolyline(
                             [(xmin,ymin),(xmax,ymin),(xmax,ymax),(xmin,ymax)],
-                            dxfattribs={"layer": layer_name, "closed": True}
+                            dxfattribs={"layer": layer_name, "closed": True, "lineweight": dxf_lw}
                         )
                         entities += 1
                     elif itype == "c":
@@ -402,7 +415,7 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                         except (AttributeError, TypeError):
                             # Fallback: item[1..4] là Points trực tiếp
                             pts = [to_dxf(item[i].x, item[i].y) for i in range(1,5)]
-                        msp.add_lwpolyline(pts, dxfattribs={"layer": layer_name, "closed": True})
+                        msp.add_lwpolyline(pts, dxfattribs={"layer": layer_name, "closed": True, "lineweight": dxf_lw})
                         entities += 1
                 # Build polylines chỉ từ bezier curve (c) segments
                 # Lines (l) đã được vẽ riêng lẻ ở trên
@@ -412,7 +425,7 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                     if item[0] != "c":
                         # Non-curve item → kết thúc segment hiện tại
                         if len(curve_pts) >= 2:
-                            msp.add_lwpolyline(curve_pts, dxfattribs={"layer": layer_name})
+                            msp.add_lwpolyline(curve_pts, dxfattribs={"layer": layer_name, "lineweight": dxf_lw})
                             entities += 1
                         curve_pts = []
                         prev_c_end = None
@@ -421,7 +434,7 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                     # Nếu điểm đầu không nối tiếp → segment mới
                     if prev_c_end and (abs(p1.x-prev_c_end[0])>1 or abs(p1.y-prev_c_end[1])>1):
                         if len(curve_pts) >= 2:
-                            msp.add_lwpolyline(curve_pts, dxfattribs={"layer": layer_name})
+                            msp.add_lwpolyline(curve_pts, dxfattribs={"layer": layer_name, "lineweight": dxf_lw})
                             entities += 1
                         curve_pts = []
                     n = 8
@@ -434,7 +447,7 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                         curve_pts.append(to_dxf(x,y))
                     prev_c_end = (p4.x, p4.y)
                 if len(curve_pts) >= 2:
-                    msp.add_lwpolyline(curve_pts, dxfattribs={"layer": layer_name})
+                    msp.add_lwpolyline(curve_pts, dxfattribs={"layer": layer_name, "lineweight": dxf_lw})
                     entities += 1
             # Text extraction disabled by default — geometry only
             # Enable bằng cách tick "Include text layer" trong UI
@@ -486,7 +499,7 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                                     _txt_layer = ensure_layer(doc, "TEXT_BLUE", layers, 5)
                                 elif _r > 200 and _g < 50:
                                     _txt_layer = ensure_layer(doc, "TEXT_RED", layers, 1)
-                                _attribs = {"layer": _txt_layer, "height": _fh, "insert": (_tx, _ty)}
+                                _attribs = {"layer": _txt_layer, "height": _fh, "insert": (_tx, _ty), "style": "Arial", "width": 0.85}
                                 if _dxf_ang > 0.5:
                                     _attribs["rotation"] = _dxf_ang
                                 msp.add_text(_txt, dxfattribs=_attribs)
