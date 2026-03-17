@@ -687,7 +687,7 @@
       <button class="btn-pro" onclick="scrollToPricing()">Upgrade Pro →</button>
     </div>
     <!-- Pro Key input -->
-    <div style="margin-top:10px;display:flex;gap:8px;align-items:center">
+    <div id="proKeyWrap" style="margin-top:10px;display:flex;gap:8px;align-items:center">
       <input type="text" id="proKeyInput" placeholder="Pro key (optional)"
         style="flex:1;background:#1a1a2e;border:1px solid var(--border);color:var(--text);
                padding:8px 12px;border-radius:6px;font-family:'Space Mono',monospace;font-size:12px;"
@@ -991,15 +991,20 @@ function updateUsageUI(data) {
   const countEl = document.getElementById('usageCount');
   const textEl = document.getElementById('usageText');
   const wrapEl = document.getElementById('usageWrap');
+  const proKeyWrap = document.getElementById('proKeyWrap');
   if (isPro) {
     textEl.innerHTML = '✓ <strong>Pro</strong> — unlimited conversions';
     wrapEl.querySelector('.btn-pro').style.display = 'none';
     document.getElementById('proKeyStatus').textContent = '✓ Active';
     document.getElementById('proKeyStatus').style.color = 'var(--success)';
+    // Ẩn ô nhập key khi đã xác nhận Pro
+    if (proKeyWrap) proKeyWrap.style.display = 'none';
   } else {
     countEl.textContent = usageRemaining;
     textEl.innerHTML = `<strong id="usageCount">${usageRemaining}</strong> free conversions remaining today`;
     wrapEl.querySelector('.btn-pro').style.display = '';
+    // Hiện lại ô nhập key nếu chưa Pro
+    if (proKeyWrap) proKeyWrap.style.display = '';
   }
 }
 async function onProKeyChange(val) {
