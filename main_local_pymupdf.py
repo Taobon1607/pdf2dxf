@@ -409,12 +409,16 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                         pass  # handled below
                     elif itype == "qu":
                         # Quad object: dùng index [0..3] thay vì .x/.y
+                        # Check stroke_color in PyMuPDF
+                        if stroke_color is None:
+                            continue
                         quad = item[1]
                         try:
-                            pts = [to_dxf(quad[i].x, quad[i].y) for i in range(4)]
+                            # PyMuPDF quad points order: ul, ur, ll, lr -> cần theo thứ tự viền 0, 1, 3, 2 để tránh 2 đường chéo X
+                            pts = [to_dxf(quad[i].x, quad[i].y) for i in (0, 1, 3, 2)]
                         except (AttributeError, TypeError):
                             # Fallback: item[1..4] là Points trực tiếp
-                            pts = [to_dxf(item[i].x, item[i].y) for i in range(1,5)]
+                            pts = [to_dxf(item[i].x, item[i].y) for i in (1, 2, 4, 3)]
                         msp.add_lwpolyline(pts, dxfattribs={"layer": layer_name, "closed": True, "lineweight": dxf_lw})
                         entities += 1
                 # Build polylines chỉ từ bezier curve (c) segments
