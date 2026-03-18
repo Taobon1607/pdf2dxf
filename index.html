@@ -915,7 +915,6 @@
           </div>
           <div style="text-align:right">
             <div style="font-size:22px;font-weight:700;color:#f0f0f8">$9</div>
-            <div style="font-size:11px;color:#9090b0">/month</div>
           </div>
         </div>
         <div class="plan-card selected-plan" data-plan="yearly" onclick="selectPlan('yearly')"
@@ -927,7 +926,6 @@
           </div>
           <div style="text-align:right">
             <div style="font-size:22px;font-weight:700;color:#00e5ff">$89</div>
-            <div style="font-size:11px;color:#9090b0">/year</div>
           </div>
         </div>
         <div class="plan-card" data-plan="lifetime" onclick="selectPlan('lifetime')"
@@ -938,7 +936,6 @@
           </div>
           <div style="text-align:right">
             <div style="font-size:22px;font-weight:700;color:#f0f0f8">$249</div>
-            <div style="font-size:11px;color:#9090b0">one-time</div>
           </div>
         </div>
       </div>
@@ -957,12 +954,10 @@
           Proceed to Payment →
         </button>
         <div style="display:flex;justify-content:center;gap:16px;margin-top:12px;flex-wrap:wrap">
-          <span style="font-size:11px;color:#9090b0">💳 Visa / Mastercard</span>
-          <span style="font-size:11px;color:#9090b0">📱 MoMo · ZaloPay</span>
-          <span style="font-size:11px;color:#9090b0">🏦 Bank QR (VietQR)</span>
+          <span style="font-size:11px;color:#9090b0">💳 Visa / Mastercard / American Express</span>
         </div>
         <p style="text-align:center;color:#5a5a78;font-size:11px;margin-top:8px">
-          Secured by PayOS · Key auto-delivered to your email
+          Secured by Stripe · Key auto-delivered to your email
         </p>
       </div>
       <div style="height:24px"></div>
@@ -1294,9 +1289,9 @@ function toggleCustomScale(val) {
 }
 // ── Payment Modal ─────────────────────────────────────────
 const PLAN_INFO = {
-  monthly:  { usd: '$9',  vnd: '229.000 VNĐ',   label: 'Monthly'  },
-  yearly:   { usd: '$89', vnd: '2.299.000 VNĐ',  label: 'Yearly'   },
-  lifetime: { usd: '$249', vnd: '6.299.000 VNĐ',  label: 'Lifetime' },
+  monthly:  { usd: '$9',   label: 'Monthly'  },
+  yearly:   { usd: '$89',  label: 'Yearly'   },
+  lifetime: { usd: '$249', label: 'Lifetime' },
 };
 let selectedPlan = 'yearly';
 function openPaymentModal() {
@@ -1312,9 +1307,6 @@ function selectPlan(plan) {
     const isSelected = el.dataset.plan === plan;
     el.style.border = isSelected ? '2px solid #00e5ff' : '1px solid #2a2a3e';
   });
-  // Update VN amount
-  document.getElementById('vn-amount').textContent = PLAN_INFO[plan]?.vnd || '';
-  document.getElementById('vn-note').textContent = `pdf2dxf ${plan}`;
 }
 document.getElementById('btnUpgrade').addEventListener('click', openPaymentModal);
 async function startPayment() {
@@ -1330,14 +1322,14 @@ async function startPayment() {
     const fd = new FormData();
     fd.append('email', email);
     fd.append('plan', selectedPlan);
-    const res = await fetch(`${API_BASE}/payos/create`, { method: 'POST', body: fd });
+    const res = await fetch(`${API_BASE}/stripe/create-checkout`, { method: 'POST', body: fd });
     const data = await res.json();
     if (data.url) {
       window.location.href = data.url;
     } else {
       alert('Payment error: ' + (data.detail || 'Unknown error'));
       btn.disabled = false;
-      btn.textContent = 'Pay with Card / MoMo / QR →';
+      btn.textContent = 'Proceed to Payment →';
     }
   } catch(e) {
     alert('Cannot connect to server. Please try again.');
