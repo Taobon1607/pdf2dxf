@@ -605,7 +605,12 @@
     animation: spin 0.7s linear infinite;
     display: inline-block;
   }
+  #paypal-button-container {
+    width: 100%;
+    margin-top: 20px;
+  }
 </style>
+<script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=USD"></script>
 </head>
 <body>
 <div class="orb orb-1"></div>
@@ -947,12 +952,10 @@
                  color:#f0f0f8;font-size:14px">
       </div>
       <!-- Payment method -->
-      <div style="padding:20px 28px 0">
-        <button id="btnPay" onclick="startPayment()"
-          style="width:100%;padding:14px;background:#00e5ff;color:#000;border:none;border-radius:10px;
-                 font-weight:700;font-size:15px;cursor:pointer">
-          Proceed to Payment →
-        </button>
+      <div style="padding:20px 28px 0" id="paypal-button-container">
+        <!-- PayPal Button will be rendered here -->
+      </div>
+      <div style="padding:0 28px 0">
         <div style="display:flex;justify-content:center;gap:16px;margin-top:12px;flex-wrap:wrap">
           <span style="font-size:11px;color:#9090b0">💳 Visa / Mastercard / American Express</span>
         </div>
@@ -1297,6 +1300,10 @@ let selectedPlan = 'yearly';
 function openPaymentModal() {
   document.getElementById('paymentModal').style.display = 'flex';
   selectPlan('yearly');
+  if (!window._paypalRendered) {
+    renderPayPalButtons();
+    window._paypalRendered = true;
+  }
 }
 function closePaymentModal() {
   document.getElementById('paymentModal').style.display = 'none';
@@ -1309,35 +1316,55 @@ function selectPlan(plan) {
   });
 }
 document.getElementById('btnUpgrade').addEventListener('click', openPaymentModal);
-async function startPayment() {
-  const email = document.getElementById('payEmail').value.trim();
-  if (!email || !email.includes('@')) {
-    alert('Please enter a valid email address');
-    return;
-  }
-  const btn = document.getElementById('btnPay');
-  btn.disabled = true;
-  btn.textContent = 'Creating payment…';
-  try {
-    const fd = new FormData();
-    fd.append('email', email);
-    fd.append('plan', selectedPlan);
-    const res = await fetch(`${API_BASE}/stripe/create-checkout`, { method: 'POST', body: fd });
-    const data = await res.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      alert('Payment error: ' + (data.detail || 'Unknown error'));
-      btn.disabled = false;
-      btn.textContent = 'Proceed to Payment →';
+// ── PayPal Integration ────────────────────────────────────
+function renderPayPalButtons() {
+  paypal.Buttons({
+    createOrder: async function(data, actions) {
+      const email = document.getElementById('payEmail').value.trim();
+      if (!email || !email.includes('@')) {
+        alert('Please enter a valid email address');
+        return actions.reject();
+      }
+      
+      const fd = new FormData();
+      fd.append('email', email);
+      fd.append('plan', selectedPlan);
+      
+      try {
+        const res = await fetch(`${API_BASE}/paypal/create-order`, { method: 'POST', body: fd });
+        if (!res.ok) {
+           const err = await res.json();
+           throw new Error(err.detail || 'Server error');
+        }
+        const order = await res.json();
+        return order.id;
+      } catch (e) {
+        alert('Could not initiate PayPal session: ' + e.message);
+        throw e;
+      }
+    },
+    onApprove: async function(data, actions) {
+      const email = document.getElementById('payEmail').value.trim();
+      const fd = new FormData();
+      fd.append('email', email);
+      fd.append('plan', selectedPlan);
+      
+      try {
+        const res = await fetch(`${API_BASE}/paypal/capture-order/${data.orderID}`, { method: 'POST', body: fd });
+        const result = await res.json();
+        if (result.status === 'success') {
+          window.location.href = `?payment=success&email=${encodeURIComponent(email)}&plan=${selectedPlan}`;
+        } else {
+          alert('Payment failed: ' + (result.detail || 'Unknown error'));
+        }
+      } catch (e) {
+        alert('Error capturing payment');
+      }
     }
-  } catch(e) {
-    alert('Cannot connect to server. Please try again.');
-    btn.disabled = false;
-    btn.textContent = 'Pay with Card / MoMo / QR →';
-  }
+  }).render('#paypal-button-container');
 }
-// Xử lý redirect sau thanh toán
+
+// Lấy thông tin từ URL để hiện thông báo thành công
 const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('payment') === 'success') {
   const email = urlParams.get('email') || '';
