@@ -2,7 +2,8 @@
 PDF to DXF — PyMuPDF version
 Dùng page.get_drawings() để lấy đầy đủ: color, fill, dashes, linewidth, path type
 """
-import os, uuid, re, tempfile, math, sqlite3, secrets, string
+import os, uuid, re, tempfile, math, sqlite3, secrets, string, json
+import vtracer  # Lệnh pip install vtracer đã chạy ở bước trước
 from pathlib import Path
 from datetime import datetime, date
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Request
@@ -229,6 +230,103 @@ def pts_are_circle(pts_2d):
     variance = sum((r-r_avg)**2 for r in radii) / len(radii)
     cv = math.sqrt(variance) / r_avg
     return (cv < 0.04), cx, cy, r_avg
+
+def parse_svg_path(svg_path_str):
+    """
+    Parser đơn giản cho SVG path từ vtracer (chủ yếu là M và L)
+    vtracer binary mode thường trả về các đoạn path khép kín.
+    """
+    cmds = re.findall(r'([MLCZz])|([-+]?\d*\.?\d+(?:[eE][-+]?\d+)?)', svg_path_str)
+    path_data = []
+    current_cmd = None
+    points = []
+    
+    for cmd, val in cmds:
+        if cmd:
+            if cmd in ('M', 'L'):
+                current_cmd = cmd
+            elif cmd in ('Z', 'z'):
+                if points:
+                    path_data.append(points)
+                    points = []
+        else:
+            points.append(float(val))
+            if len(points) == 2 and current_cmd in ('M', 'L'):
+                # Lưu tọa độ lẻ (x, y)
+                pass 
+
+    # Re-group points thành list các tuples (x, y)
+    final_paths = []
+    for p_list in path_data:
+        tuples = []
+        for i in range(0, len(p_list), 2):
+            tuples.append((p_list[i], p_list[i+1]))
+        if tuples:
+            final_paths.append(tuples)
+    return final_paths
+
+def process_scan_page(page, msp, mult, y_offset, rotation, mb_w, mb_h):
+    """
+    Xử lý trang scan: Render sang ảnh -> Vectorize bằng vtracer -> DXF
+    """
+    # 1. Render page sang pixmap (ảnh) với DPI cao để đảm bảo độ nét
+    zoom = 3  # Tương đương ~216 DPI (72 * 3)
+    mat = __import__("fitz").Matrix(zoom, zoom)
+    pix = page.get_pixmap(matrix=mat, colorspace=__import__("fitz").csGRAY)
+    
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_img:
+        pix.save(tmp_img.name)
+        img_path = tmp_img.name
+    
+    try:
+        # 2. Vectorize bằng vtracer
+        # Mode 'binary' tốt cho bản vẽ kỹ thuật trắng đen
+        svg_str = vtracer.convert_to_svg(img_path, mode='binary', filter_speckle=4, color_precision=2)
+        
+        # 3. Parse SVG paths
+        # SVG coordinate: (0, 0) ở top-left của ảnh render
+        # Cần map về DXF coordinate
+        paths = re.findall(r'd="([^"]+)"', svg_str)
+        
+        img_w = pix.width
+        img_h = pix.height
+        
+        # Tỷ lệ từ pixmap pixel về PDF points
+        pix_to_pt = 1.0 / zoom
+        
+        for p_str in paths:
+            pts_svg = parse_svg_path(p_str)
+            for poly in pts_svg:
+                dxf_pts = []
+                for sx, sy in poly:
+                    # Chuyển từ pixel -> points
+                    px_pt = sx * pix_to_pt
+                    py_pt = sy * pix_to_pt
+                    
+                    # Áp dụng logic to_dxf tương tự bản vector
+                    if rotation == 90:
+                        x = mb_w - py_pt
+                        y = mb_h - px_pt
+                    elif rotation == 270:
+                        x = py_pt
+                        y = px_pt
+                    elif rotation == 180:
+                        x = mb_w - px_pt
+                        y = py_pt
+                    else:
+                        x = px_pt
+                        y = mb_h - py_pt
+                    
+                    dxf_pts.append((x * mult, y_offset + y * mult))
+                
+                if len(dxf_pts) >= 2:
+                    msp.add_lwpolyline(dxf_pts, dxfattribs={"layer": "SCAN_VECTOR", "lineweight": 0, "closed": True})
+        
+        return len(paths)
+    finally:
+        if os.path.exists(img_path):
+            os.unlink(img_path)
+
 def get_dxf_lineweight(lw_pts: float) -> int:
     """Chuyển đổi lineweight từ points (PDF) sang DXF lineweight (1/100 mm)"""
     lw_mm = lw_pts * 0.3528
@@ -266,7 +364,7 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
         "GREEN":   3,  "BLUE":   5,  "YELLOW": 2,
         "CYAN":    4,  "MAGENTA":6,  "GRAY":   8,
         "DASHED":  4,  "TEXT":   2,  "HATCH":  8,
-        "GEOMETRY":7,
+        "GEOMETRY":7,  "SCAN_VECTOR": 7,
     }
     for lname, aci in standard.items():
         ensure_layer(doc, lname, layers, aci, lname.startswith("DASHED"))
@@ -336,6 +434,14 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
             ], dxfattribs={"layer": "BLACK", "closed": True})
             # ── Extract drawings (geometry) ───────────────
             drawings = page.get_drawings()
+            
+            # Kiểm tra nếu trang có vẻ là scan (không có drawing và ít hoặc không có text)
+            is_probably_scan = len(drawings) == 0
+            if is_probably_scan:
+                # Thử trigger xử lý scan
+                scan_entities = process_scan_page(page, msp, mult, cur_offset, rotation, mb_w, mb_h)
+                entities += scan_entities
+            
             for path in drawings:
                 stroke_color = path.get("color")    # RGB tuple hoặc None
                 fill_color   = path.get("fill")     # RGB tuple hoặc None
