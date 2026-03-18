@@ -2,8 +2,7 @@
 PDF to DXF — PyMuPDF version
 Dùng page.get_drawings() để lấy đầy đủ: color, fill, dashes, linewidth, path type
 """
-import os, uuid, re, tempfile, math, sqlite3, secrets, string, json
-import stripe
+import os, uuid, re, tempfile, math, sqlite3, secrets, string, json, requests
 from pathlib import Path
 from datetime import datetime, date
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Request
@@ -593,16 +592,30 @@ SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_USER = os.environ.get("SMTP_USER", "")
 SMTP_PASS = os.environ.get("SMTP_PASS", "")
 SMTP_FROM = os.environ.get("SMTP_FROM", "noreply@pdf2dxf.io")
-# ── Stripe config ──────────────────────────────────────────
-STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
-STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
-stripe.api_key = STRIPE_SECRET_KEY
+# ── PayPal config ──────────────────────────────────────────
+PAYPAL_CLIENT_ID     = os.environ.get("PAYPAL_CLIENT_ID", "")
+PAYPAL_CLIENT_SECRET = os.environ.get("PAYPAL_CLIENT_SECRET", "")
+PAYPAL_MODE          = os.environ.get("PAYPAL_MODE", "sandbox") # 'sandbox' or 'live'
+
+PAYPAL_API_BASE = "https://api-m.sandbox.paypal.com" if PAYPAL_MODE == "sandbox" else "https://api-m.paypal.com"
 
 PRICES = {
-    "monthly":  {"amount": 900,   "currency": "usd", "desc": "pdf2dxf Pro - 1 Month"},
-    "yearly":   {"amount": 8900,  "currency": "usd", "desc": "pdf2dxf Pro - 1 Year"},
-    "lifetime": {"amount": 24900, "currency": "usd", "desc": "pdf2dxf Pro - Lifetime"},
+    "monthly":  {"amount": "9.00",   "currency": "USD", "desc": "pdf2dxf Pro - 1 Month"},
+    "yearly":   {"amount": "89.00",  "currency": "USD", "desc": "pdf2dxf Pro - 1 Year"},
+    "lifetime": {"amount": "249.00", "currency": "USD", "desc": "pdf2dxf Pro - Lifetime"},
 }
+
+def get_paypal_access_token():
+    """Lấy Access Token từ PayPal API"""
+    res = requests.post(
+        f"{PAYPAL_API_BASE}/v1/oauth2/token",
+        auth=(PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET),
+        data={"grant_type": "client_credentials"},
+        timeout=10
+    )
+    if not res.ok:
+        raise Exception(f"Failed to get PayPal token: {res.text}")
+    return res.json()["access_token"]
 # Removed PayOS helper functions
 def send_key_email(to_email: str, key: str, plan: str, expires_at: str):
     """Gửi email chứa pro key cho khách"""
@@ -782,82 +795,86 @@ def revoke_key(secret: str = Form(...), key: str = Form(...)):
     conn.commit()
     conn.close()
     return {"revoked": key}
-# ── Stripe Endpoints ───────────────────────────────────────
-@app.post("/stripe/create-checkout")
-async def stripe_create_checkout(
-    request: Request,
+# ── PayPal Endpoints ───────────────────────────────────────
+@app.post("/paypal/create-order")
+async def paypal_create_order_endpoint(
     email: str = Form(...),
     plan: str = Form(default="monthly"),
 ):
-    """Tạo Stripe Checkout Session"""
-    if not STRIPE_SECRET_KEY:
-        raise HTTPException(503, "Stripe chưa được cấu hình")
+    """Tạo PayPal order trên server"""
+    if not PAYPAL_CLIENT_ID or not PAYPAL_CLIENT_SECRET:
+        raise HTTPException(503, "PayPal chưa được cấu hình")
     
     if plan not in PRICES:
         raise HTTPException(400, "Invalid plan")
     
     price = PRICES[plan]
+    access_token = get_paypal_access_token()
     
-    # URL redirect sau khi thanh toán
-    origin = request.headers.get("origin", "https://pdf2dxf.us")
-    success_url = f"{origin}?payment=success&email={email}&plan={plan}"
-    cancel_url  = f"{origin}?payment=cancel"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {access_token}"
+    }
     
-    try:
-        session = stripe.checkout.Session.create(
-            payment_method_types=["card"],
-            customer_email=email,
-            line_items=[{
-                "price_data": {
-                    "currency": price["currency"],
-                    "product_data": {
-                        "name": price["desc"],
-                    },
-                    "unit_amount": price["amount"],
-                },
-                "quantity": 1,
-            }],
-            mode="payment",
-            success_url=success_url,
-            cancel_url=cancel_url,
-            metadata={
-                "email": email,
-                "plan": plan
-            }
-        )
-        return {"url": session.url}
-    except Exception as e:
-        raise HTTPException(500, str(e))
+    body = {
+        "intent": "CAPTURE",
+        "purchase_units": [{
+            "amount": {
+                "currency_code": price["currency"],
+                "value": price["amount"]
+            },
+            "description": price["desc"]
+        }]
+    }
+    
+    res = requests.post(
+        f"{PAYPAL_API_BASE}/v2/checkout/orders",
+        headers=headers,
+        json=body,
+        timeout=10
+    )
+    
+    if not res.ok:
+        raise HTTPException(500, f"PayPal Error: {res.text}")
+    
+    order = res.json()
+    
+    # Lưu metadata tạm vào memory (cho demo) hoặc Database để dùng khi capture
+    # Ở đây chúng ta sẽ pass email/plan vào frontend để gửi lại khi capture
+    return {"id": order["id"]}
 
-@app.post("/webhook/stripe")
-async def stripe_webhook(request: Request):
-    """Stripe webhook — tự động tạo key khi thanh toán thành công"""
-    payload = await request.body()
-    sig_header = request.headers.get("stripe-signature")
+@app.post("/paypal/capture-order/{order_id}")
+async def paypal_capture_order_endpoint(
+    order_id: str,
+    email: str = Form(...),
+    plan: str = Form(default="monthly"),
+):
+    """Capture PayPal order sau khi khách approve"""
+    access_token = get_paypal_access_token()
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {access_token}"
+    }
     
-    try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, STRIPE_WEBHOOK_SECRET
-        )
-    except ValueError:
-        raise HTTPException(400, "Invalid payload")
-    except stripe.error.SignatureVerificationError:
-        raise HTTPException(400, "Invalid signature")
+    res = requests.post(
+        f"{PAYPAL_API_BASE}/v2/checkout/orders/{order_id}/capture",
+        headers=headers,
+        timeout=15
+    )
     
-    if event["type"] == "checkout.session.completed":
-        session = event["data"]["object"]
-        email = session.get("metadata", {}).get("email")
-        plan  = session.get("metadata", {}).get("plan", "monthly")
-        
-        if email:
-            # Tạo key và gửi email
-            result = generate_pro_key(email=email, label=f"Stripe {plan}", plan=plan)
-            send_key_email(email, result["key"], plan, result.get("expires_at", ""))
-            print(f"Stripe payment success: {email} {plan} → {result['key']}")
-            
-    return {"status": "success"}
+    if not res.ok:
+        raise HTTPException(500, f"Capture Error: {res.text}")
+    
+    capture_data = res.json()
+    if capture_data.get("status") == "COMPLETED":
+        # Thanh toán thành công -> tạo key và gửi email
+        result = generate_pro_key(email=email, label=f"PayPal {plan}", plan=plan)
+        send_key_email(email, result["key"], plan, result.get("expires_at", ""))
+        return {"status": "success", "key": result["key"]}
+    
+    return {"status": "failed", "detail": capture_data.get("status")}
 
-# Removed PayOS endpoints
+# Removed Stripe endpoints
 @app.post("/webhook/paypal")
 async def paypal_webhook(request: Request):
     """PayPal IPN/Webhook — tự động tạo key khi có payment"""
