@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6D2KCTWQYL"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-6D2KCTWQYL');
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Engineering Guides & Tutorials | pdf2dxf.us</title>
+<meta name="description" content="Explore our technical guides on PDF to DXF conversion, AutoCAD font fixing, and scanned drawing vectorization.">
+<link rel="canonical" href="https://pdf2dxf.us/guides.html">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0d0d14;
+    --surface:   #16161f;
+    --border:    #2a2a3e;
+    --accent:    #00e5ff;
+    --text:      #f0f0f8;
+    --muted:     #9090b0;
+    --grid:      rgba(0,229,255,0.04);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: -1;
+  }
+  .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+  header { padding: 28px 0; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+  .logo { font-family: 'Space Mono', monospace; font-size: 18px; color: var(--accent); text-decoration: none; }
+  .logo span { color: var(--muted); }
+  nav a { color: var(--muted); text-decoration: none; font-size: 13px; margin-left: 24px; text-transform: uppercase; transition: 0.2s; }
+  nav a:hover { color: var(--text); }
+  
+  .hero { padding: 64px 0; text-align: center; }
+  h1 { font-size: 48px; font-weight: 800; margin-bottom: 16px; letter-spacing: -1px; }
+  .hero p { color: var(--muted); font-size: 18px; max-width: 600px; margin: 0 auto; }
+  
+  .guide-grid { display: grid; gap: 24px; padding-bottom: 80px; }
+  .guide-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    text-decoration: none;
+    transition: 0.25s;
+    display: block;
+    position: relative;
+    overflow: hidden;
+  }
+  .guide-card:hover { border-color: var(--accent); transform: translateY(-3px); }
+  .guide-card .badge { display: inline-block; background: rgba(0,229,255,0.1); color: var(--accent); padding: 4px 10px; border-radius: 4px; font-size: 10px; font-family: 'Space Mono', monospace; margin-bottom: 16px; }
+  .guide-card h2 { font-size: 24px; color: var(--text); margin-bottom: 12px; }
+  .guide-card p { color: var(--muted); font-size: 15px; line-height: 1.6; }
+  .guide-card .read-more { margin-top: 20px; color: var(--accent); font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  
+  footer { padding: 48px 0; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--muted); font-family: 'Space Mono', monospace; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <a href="index.html" class="logo">pdf<span>2</span>dxf<span>.us</span></a>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="index.html#pricing">Pricing</a>
+      <a href="index.html#compare">Compare</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <h1>Engineering Resources</h1>
+    <p>In-depth technical guides to help you master PDF to CAD conversion and AutoCAD optimization.</p>
+  </div>
+
+  <div class="guide-grid">
+    <!-- Guide 1 -->
+    <a href="blog-fix-pdf-fonts.html" class="guide-card">
+      <span class="badge">Fonts & Text</span>
+      <h2>Fixing PDF Font Issues in AutoCAD</h2>
+      <p>Why text often turns into question marks or symbols during conversion, and how to preserve editable text using the correct settings.</p>
+      <div class="read-more">READ GUIDE →</div>
+    </a>
+
+    <!-- Guide 2 -->
+    <a href="blog-scanned-pdf-to-autocad.html" class="guide-card">
+      <span class="badge">OCR & Raster</span>
+      <h2>Scanned PDF to AutoCAD: Mastering Vectorization</h2>
+      <p>A step-by-step guide on converting non-vector drawings into editable DXF entities using our advanced Raster-to-Vector (R2V) engine.</p>
+      <div class="read-more">READ GUIDE →</div>
+    </a>
+  </div>
+
+  <footer>
+    © 2025 pdf2dxf.us — Built for engineers
+  </footer>
+</div>
+</body>
+</html>
