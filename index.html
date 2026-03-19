@@ -610,7 +610,7 @@
     margin-top: 20px;
   }
 </style>
-<script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=USD&theme=dark"></script>
+<script src="https://www.paypal.com/sdk/js?client-id=ATBXxcvfGNXhas34_cL5JiP2jxmIQV-YTFneuaXUDMwuNi_AZ9LFuCyXDlKFqsLwYf_6wjiT43tmNlQB&currency=USD&theme=dark"></script>
 </head>
 <body>
 <div class="orb orb-1"></div>
@@ -960,7 +960,7 @@
           <span style="font-size:11px;color:#9090b0">💳 Visa / Mastercard / American Express</span>
         </div>
         <p style="text-align:center;color:#5a5a78;font-size:11px;margin-top:8px">
-          Secured by Stripe · Key auto-delivered to your email
+          Secured by PayPal · Key auto-delivered to your email
         </p>
       </div>
       <div style="height:24px"></div>
@@ -1318,6 +1318,13 @@ function selectPlan(plan) {
 document.getElementById('btnUpgrade').addEventListener('click', openPaymentModal);
 // ── PayPal Integration ────────────────────────────────────
 function renderPayPalButtons() {
+  if (typeof paypal === 'undefined') {
+    document.getElementById('paypal-button-container').innerHTML = 
+      '<p style="color:#ff6b35;font-size:12px;text-align:center;padding:10px;border:1px dashed #ff6b35;border-radius:8px">' +
+      '⚠️ PayPal script failed to load. Please check your <b>Client ID</b> in index.html.' +
+      '</p>';
+    return;
+  }
   paypal.Buttons({
     style: {
       layout: 'vertical',
