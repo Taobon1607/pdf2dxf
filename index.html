@@ -610,7 +610,7 @@
     margin-top: 20px;
   }
 </style>
-<script src="https://www.paypal.com/sdk/js?client-id=ATBXxcvfGNXhas34_cL5JiP2jxmIQV-YTFneuaXUDMwuNi_AZ9LFuCyXDlKFqsLwYf_6wjiT43tmNlQB&currency=USD"></script>
+<script src="https://www.paypal.com/sdk/js?client-id=YOUR_PAYPAL_CLIENT_ID&currency=USD&theme=dark"></script>
 </head>
 <body>
 <div class="orb orb-1"></div>
@@ -1319,6 +1319,12 @@ document.getElementById('btnUpgrade').addEventListener('click', openPaymentModal
 // ── PayPal Integration ────────────────────────────────────
 function renderPayPalButtons() {
   paypal.Buttons({
+    style: {
+      layout: 'vertical',
+      color:  'silver',
+      shape:  'rect',
+      label:  'paypal'
+    },
     createOrder: async function(data, actions) {
       const email = document.getElementById('payEmail').value.trim();
       if (!email || !email.includes('@')) {
