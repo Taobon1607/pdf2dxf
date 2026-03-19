@@ -610,7 +610,9 @@
     margin-top: 20px;
   }
 </style>
-<script src="https://www.paypal.com/sdk/js?client-id=ATBXxcvfGNXhas34_cL5JiP2jxmIQV-YTFneuaXUDMwuNi_AZ9LFuCyXDlKFqsLwYf_6wjiT43tmNlQB&currency=USD&theme=dark"></script>
+<script src="https://www.paypal.com/sdk/js?client-id=ATBXxcvfGNXhas34_cL5JiP2jxmIQV-YTFneuaXUDMwuNi_AZ9LFuCyXDlKFqsLwYf_6wjiT43tmNlQB&currency=USD" 
+        onload="console.log('PayPal SDK loaded successfully')" 
+        onerror="alert('Failed to load PayPal SDK. Please check your network or Client ID.')"></script>
 </head>
 <body>
 <div class="orb orb-1"></div>
