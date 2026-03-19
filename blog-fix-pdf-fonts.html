@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6D2KCTWQYL"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-6D2KCTWQYL');
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How to Fix PDF Font Issues in AutoCAD | pdf2dxf.us Guide</title>
+<meta name="description" content="Learn why PDF to DXF conversion often breaks fonts and how to fix text showing as question marks or symbols in AutoCAD using pdf2dxf.us.">
+<link rel="canonical" href="https://pdf2dxf.us/blog-fix-pdf-fonts.html">
+
+<!-- Open Graph -->
+<meta property="og:title" content="How to Fix PDF Font Issues in AutoCAD | Engineering Guide">
+<meta property="og:description" content="Stop struggling with broken fonts in CAD! A deep dive into fixing PDF text entities during DXF conversion.">
+<meta property="og:url" content="https://pdf2dxf.us/blog-fix-pdf-fonts.html">
+<meta property="og:type" content="article">
+<meta property="og:image" content="https://pdf2dxf.us/og-image.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0d0d14;
+    --surface:   #16161f;
+    --border:    #2a2a3e;
+    --accent:    #00e5ff;
+    --text:      #f0f0f8;
+    --muted:     #9090b0;
+    --grid:      rgba(0,229,255,0.04);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    line-height: 1.6;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: -1;
+  }
+  .container { max-width: 800px; margin: 0 auto; padding: 0 24px; }
+  header { padding: 28px 0; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+  .logo { font-family: 'Space Mono', monospace; font-size: 18px; color: var(--accent); text-decoration: none; }
+  .logo span { color: var(--muted); }
+  nav a { color: var(--muted); text-decoration: none; font-size: 13px; margin-left: 24px; text-transform: uppercase; }
+  
+  article { padding: 64px 0; }
+  .badge { display: inline-block; background: rgba(0,229,255,0.1); color: var(--accent); padding: 4px 12px; border-radius: 100px; font-size: 11px; font-family: 'Space Mono', monospace; margin-bottom: 16px; }
+  h1 { font-size: clamp(32px, 5vw, 48px); font-weight: 800; line-height: 1.2; margin-bottom: 24px; color: var(--text); }
+  .meta { color: var(--muted); font-family: 'Space Mono', monospace; font-size: 13px; margin-bottom: 48px; border-bottom: 1px solid var(--border); padding-bottom: 24px; }
+  
+  .content h2 { font-size: 24px; margin: 48px 0 20px; color: var(--accent); }
+  .content p { margin-bottom: 20px; font-size: 17px; color: #d0d0e0; }
+  .content ul { margin: 20px 0 20px 24px; color: #d0d0e0; }
+  .content li { margin-bottom: 12px; }
+  .content code { background: var(--surface); padding: 2px 6px; border-radius: 4px; font-family: 'Space Mono', monospace; font-size: 15px; color: var(--accent); }
+  
+  .cta-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; margin-top: 64px; text-align: center; }
+  .btn { display: inline-block; background: var(--accent); color: #000; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 700; font-family: 'Space Mono', monospace; margin-top: 16px; transition: 0.2s; }
+  .btn:hover { background: #33ecff; transform: translateY(-2px); }
+  
+  footer { padding: 48px 0; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--muted); font-family: 'Space Mono', monospace; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <a href="index.html" class="logo">pdf<span>2</span>dxf<span>.us</span></a>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="index.html#pricing">Pricing</a>
+    </nav>
+  </header>
+
+  <article>
+    <span class="badge">Technical Guide</span>
+    <h1>How to Fix PDF Font Issues in AutoCAD: Why Your Text Becomes Symbols</h1>
+    <div class="meta">Updated: March 19, 2026 • By pdf2dxf Team</div>
+
+    <div class="content">
+      <p>Converting engineering drawings from PDF to DXF is often a smooth process—until you open the file in AutoCAD and find that your beautiful annotations have turned into a mess of question marks, squares, or weird symbols.</p>
+      <p>This is one of the most common complaints in the AEC industry. In this guide, we'll explain why this happens and how to fix it once and for all.</p>
+
+      <h2>1. The "SHX" vs "TrueType" Problem</h2>
+      <p>The root of the problem lies in how AutoCAD handles text. Historically, AutoCAD uses <code>SHX</code> fonts, which are actually defined as collections of vector lines rather than characters. When you export a drawing to PDF, newer versions of AutoCAD try to be "smart" by embedding these SHX fonts as hidden comments.</p>
+      <p>However, when a standard converter reads that PDF, it doesn't see "Text"; it sees a bunch of tiny lines that <i>look</i> like a letter. The result? A DXF file where the letter "A" is just 3 separate lines, and you can't edit the numerical value of your dimensions.</p>
+
+      <h2>2. How pdf2dxf.us Solves This</h2>
+      <p>Our conversion engine at <code>pdf2dxf.us</code> uses an advanced OCR (Optical Character Recognition) layer combined with vector path analysis. Instead of just tracing lines, we try to reconstruct the text entities:</p>
+      <ul>
+        <li><strong>Character Recognition</strong>: We detect common engineering fonts and map them to standard DXF <code>TEXT</code> entities.</li>
+        <li><strong>Scale Awareness</strong>: We keep the text size relative to your drawing scale.</li>
+        <li><strong>Layer Integrity</strong>: Text is kept on its original layer, so you can toggle annotations on and off easily.</li>
+      </ul>
+
+      <h2>3. AutoCAD Settings You Should Check</h2>
+      <p>If you've converted a file and the text still looks off, check these internal AutoCAD variables:</p>
+      <ul>
+        <li><code>FONTALT</code>: This variable controls the alternative font used when a font file is missing. Set it to <code>simplex.shx</code> or <code>arial.ttf</code>.</li>
+        <li><code>PDFSHX</code>: When creating PDFs in AutoCAD, set this to <code>0</code> to avoid the creation of those annoying "SHX comments" that confuse most converters.</li>
+      </ul>
+      
+      <h2>4. Pro Tip: Use the 'Include Text Layer' Option</h2>
+      <p>When using our converter, make sure the <strong>"Include text layer"</strong> checkbox is checked. This enables our most advanced text-reconstruction algorythms designed specifically for engineering notation.</p>
+    </div>
+
+    <div class="cta-box">
+      <h3>Ready to convert your drawings correctly?</h3>
+      <p>Experience the highest quality PDF to DXF conversion with layer and font preservation.</p>
+      <a href="index.html" class="btn">Start Converting Now</a>
+    </div>
+  </article>
+
+  <footer>
+    © 2025 pdf2dxf.us — Built for engineers
+  </footer>
+</div>
+</body>
+</html>
