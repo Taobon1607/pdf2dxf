@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6D2KCTWQYL"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-6D2KCTWQYL');
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scanned PDF to AutoCAD Guide: Raster to DXF | pdf2dxf.us</title>
+<meta name="description" content="Learn how to convert scanned PDF drawings into editable DXF entities for AutoCAD using advanced Raster-to-Vector (R2V) and OCR technology.">
+<link rel="canonical" href="https://pdf2dxf.us/blog-scanned-pdf-to-autocad.html">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0d0d14;
+    --surface:   #16161f;
+    --border:    #2a2a3e;
+    --accent:    #00e5ff;
+    --text:      #f0f0f8;
+    --muted:     #9090b0;
+    --grid:      rgba(0,229,255,0.04);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    line-height: 1.6;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: -1;
+  }
+  .container { max-width: 800px; margin: 0 auto; padding: 0 24px; }
+  header { padding: 28px 0; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+  .logo { font-family: 'Space Mono', monospace; font-size: 18px; color: var(--accent); text-decoration: none; }
+  .logo span { color: var(--muted); }
+  nav a { color: var(--muted); text-decoration: none; font-size: 13px; margin-left: 24px; text-transform: uppercase; }
+  
+  article { padding: 64px 0; }
+  .badge { display: inline-block; background: rgba(0,229,255,0.1); color: var(--accent); padding: 4px 12px; border-radius: 100px; font-size: 11px; font-family: 'Space Mono', monospace; margin-bottom: 16px; }
+  h1 { font-size: clamp(32px, 5vw, 48px); font-weight: 800; line-height: 1.2; margin-bottom: 24px; }
+  .meta { color: var(--muted); font-family: 'Space Mono', monospace; font-size: 13px; margin-bottom: 48px; border-bottom: 1px solid var(--border); padding-bottom: 24px; }
+  
+  .content h2 { font-size: 24px; margin: 48px 0 20px; color: var(--accent); }
+  .content p { margin-bottom: 20px; font-size: 17px; color: #d0d0e0; }
+  .content ul { margin: 20px 0 20px 24px; color: #d0d0e0; }
+  .content li { margin-bottom: 12px; }
+  
+  .cta-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; margin-top: 64px; text-align: center; }
+  .btn { display: inline-block; background: var(--accent); color: #000; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 700; font-family: 'Space Mono', monospace; margin-top: 16px; transition: 0.2s; }
+  .btn:hover { background: #33ecff; transform: translateY(-2px); }
+  
+  footer { padding: 48px 0; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--muted); font-family: 'Space Mono', monospace; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <a href="index.html" class="logo">pdf<span>2</span>dxf<span>.us</span></a>
+    <nav>
+      <a href="guides.html">Back to Guides</a>
+      <a href="index.html">Home</a>
+    </nav>
+  </header>
+
+  <article>
+    <span class="badge">OCR & Vectorization</span>
+    <h1>Scanned PDF to AutoCAD: How to Convert Raster Drawings into DXF</h1>
+    <div class="meta">Updated: March 19, 2026 • By pdf2dxf Team</div>
+
+    <div class="content">
+      <p>Working with old paper drawings that have been scanned into PDF is one of the most tedious tasks for a CAD engineer. Unlike modern "Vector" PDFs, scanned drawings are just big collections of pixels (Raster). You can't select a line or measure a distance easily.</p>
+      <p>In this guide, we'll show you how to use <code>pdf2dxf.us</code> to automate the vectorization process using our built-in R2V engine.</p>
+
+      <h2>1. Raster vs. Vector: Know the Difference</h2>
+      <p>Before you begin, it's important to know what you're dealing with. Standard converters fail on scanned drawings because they look for <i>geometric instructions</i>. A scanned PDF has none—it only has "dots".</p>
+      <p>To convert this, you need a tool that performs <strong>Pattern Recognition</strong>. It needs to "look" at the dots and realize that a horizontal sequence of black dots is actually a line.</p>
+
+      <h2>2. Preparing Your Scan for Better Results</h2>
+      <p>The quality of the output depends heavily on the source image. For the best DXF results:</p>
+      <ul>
+        <li><strong>Resolution</strong>: Scan at 300 DPI or higher. Anything lower will cause jagged lines.</li>
+        <li><strong>Contrast</strong>: Ensure the lines are dark and the background is clean white.</li>
+        <li><strong>Orientation</strong>: Straighten the scan as much as possible before uploading.</li>
+      </ul>
+
+      <h2>3. Using the pdf2dxf.us R2V Engine</h2>
+      <p>When you upload a scanned PDF to our platform, our backend detects that there are no vector paths and automatically triggers the <strong>Raster-to-Vector (R2V)</strong> workflow:</p>
+      <ul>
+        <li><strong>Line Detection</strong>: We use a thinning algorithm to find the centerline of every pixel-based stroke.</li>
+        <li><strong>Entity Mapping</strong>: Detected strokes are converted into <code>LINE</code> and <code>POLYLINE</code> entities.</li>
+        <li><strong>Dimension OCR</strong>: We run an Optical Character Recognition pass on numbers and labels, converting them into editable <code>TEXT</code>.</li>
+      </ul>
+
+      <h2>4. Cleaning Up in AutoCAD</h2>
+      <p>No R2V process is 100% perfect. After converting, you might need to:</p>
+      <ul>
+        <li>Join broken lines using the <code>JOIN</code> command.</li>
+        <li>Adjust the global scale of the drawing if the units feel off.</li>
+        <li>Check for overlapping entities in areas with dense hatches.</li>
+      </ul>
+    </div>
+
+    <div class="cta-box">
+      <h3>Stop re-drawing from scratch</h3>
+      <p>Upload your scanned drawings now and get an editable DXF in seconds.</p>
+      <a href="index.html" class="btn">Convert Scanned PDF</a>
+    </div>
+  </article>
+
+  <footer>
+    © 2025 pdf2dxf.us — Built for engineers
+  </footer>
+</div>
+</body>
+</html>
