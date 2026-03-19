@@ -5,7 +5,7 @@ Dùng page.get_drawings() để lấy đầy đủ: color, fill, dashes, linewid
 import os, uuid, re, tempfile, math, sqlite3, secrets, string, json, requests
 from pathlib import Path
 from datetime import datetime, date
-import vtracer
+import vtracer, cv2, numpy as np
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -529,6 +529,114 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
         "entities": entities,
         "layers":   len(layers),
     }
+# ── CNC-grade Image Processing Helpers ──────────────────────
+COLOR_PRESETS = {
+    'red':     [(np.array([0,50,50]),   np.array([15,255,255])),
+                (np.array([160,50,50]), np.array([180,255,255]))],
+    'black':   [(np.array([0,0,0]),     np.array([180,255,50]))],
+    'white':   [(np.array([0,0,200]),   np.array([180,30,255]))],
+    'blue':    [(np.array([100,80,80]), np.array([130,255,255]))],
+    'green':   [(np.array([40,80,80]),  np.array([85,255,255]))],
+    'nonwhite': None,
+}
+
+def build_mask_cnc(img, color='nonwhite', min_component=300):
+    """Xử lý ảnh bằng OpenCV: Lọc màu, khử nhiễu (CNC v2 logic)"""
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    
+    if color == 'nonwhite':
+        _, mask = cv2.threshold(gray, 210, 255, cv2.THRESH_BINARY_INV)
+    elif color in COLOR_PRESETS and COLOR_PRESETS[color]:
+        ranges = COLOR_PRESETS[color]
+        mask = cv2.inRange(hsv, ranges[0][0], ranges[0][1])
+        for lo, hi in ranges[1:]:
+            mask = cv2.bitwise_or(mask, cv2.inRange(hsv, lo, hi))
+    else:
+        # Fallback to simple threshold
+        _, mask = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY_INV)
+
+    # Khử nhiễu morphology và loại bỏ các đốm nhỏ
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((3,3), np.uint8))
+    num, labels, stats, _ = cv2.connectedComponentsWithStats(mask)
+    clean = np.zeros_like(mask)
+    for i in range(1, num):
+        if stats[i, cv2.CC_STAT_AREA] >= min_component:
+            clean[labels == i] = 255
+    return clean
+
+def bezier_flatten(p0, p1, p2, p3, n=16):
+    """Làm phẳng đường cong Bézier thành chuỗi điểm (CNC v2 logic)"""
+    res = []
+    for k in range(0, n + 1):
+        t = k / n; mt = 1 - t
+        x = mt**3*p0[0] + 3*mt**2*t*p1[0] + 3*mt*t**2*p2[0] + t**3*p3[0]
+        y = mt**3*p0[1] + 3*mt**2*t*p1[1] + 3*mt*t**2*p2[1] + t**3*p3[1]
+        res.append((x, y))
+    return res
+
+def vectorize_opencv(mask, mult, img_h):
+    """Vectorize binary mask using OpenCV contours (Robust fallback)"""
+    contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    all_paths = []
+    for cnt in contours:
+        # Làm mượt đường nét (epsilon tùy chỉnh độ chi tiết)
+        epsilon = 0.001 * cv2.arcLength(cnt, True)
+        approx = cv2.approxPolyDP(cnt, epsilon, True)
+        pts = []
+        for p in approx:
+            x_px, y_px = p[0]
+            pts.append((x_px * mult, (img_h - y_px) * mult))
+        if len(pts) >= 2:
+            all_paths.append((pts, True)) # Contours are closed
+    return all_paths
+
+def parse_vector_svg(svg_content, mult, img_h=1000):
+    """Bộ giải mã SVG nâng cao hỗ trợ Bézier và lặp lệnh (CNC v2 logic)"""
+    import re as _re
+    # Tìm transform từ potrace/vtracer nếu có (mặc định vtracer ít dùng transform phức tạp)
+    all_paths = []
+    path_data_list = _re.findall(r'\bd="([^"]+)"', svg_content)
+    
+    for pd in path_data_list:
+        tokens = _re.findall(r'[MmCcLlHhVvSsZz]|[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?', pd)
+        pts = []; cx, cy = 0.0, 0.0; sx_start, sy_start = 0.0, 0.0
+        cmd = None; i = 0
+        
+        while i < len(tokens):
+            tok = tokens[i]
+            if tok[0].isalpha():
+                cmd = tok; i += 1; continue
+            
+            # Xử lý các lệnh M, L, C, S, H, V...
+            if cmd in ('M', 'm'):
+                x, y = float(tokens[i]), float(tokens[i+1]); i += 2
+                if cmd == 'm': x += cx; y += cy
+                cx, cy = x, y; sx_start, sy_start = cx, cy
+                pts.append((cx * mult, (img_h - cy) * mult))
+                cmd = 'L' if cmd == 'M' else 'l' # Implicit repeat
+            elif cmd in ('L', 'l'):
+                x, y = float(tokens[i]), float(tokens[i+1]); i += 2
+                if cmd == 'l': x += cx; y += cy
+                cx, cy = x, y; pts.append((cx * mult, (img_h - cy) * mult))
+            elif cmd in ('C', 'c'):
+                v = [float(tokens[i+j]) for j in range(6)]; i += 6
+                if cmd == 'c':
+                    p1 = (cx+v[0], cy+v[1]); p2 = (cx+v[2], cy+v[3]); p3 = (cx+v[4], cy+v[5])
+                else:
+                    p1 = (v[0], v[1]); p2 = (v[2], v[3]); p3 = (v[4], v[5])
+                curve_pts = bezier_flatten((cx, cy), p1, p2, p3)
+                for cpt in curve_pts[1:]:
+                    pts.append((cpt[0] * mult, (img_h - cpt[1]) * mult))
+                cx, cy = p3
+            elif cmd in ('Z', 'z'):
+                if len(pts) >= 2: all_paths.append((pts[:], True))
+                pts = []; cx, cy = sx_start, sy_start; i += 1; cmd = None
+            else:
+                i += 1 # Bỏ qua các tokens không hiểu
+        if len(pts) >= 2: all_paths.append((pts, False))
+    return all_paths
+
 def do_convert_image(img_bytes, filename, version, scale, units):
     import ezdxf
     import vtracer
@@ -536,68 +644,31 @@ def do_convert_image(img_bytes, filename, version, scale, units):
     import os
     import xml.dom.minidom as minidom
 
+    # 1. Decode image and apply CNC preprocessing
+    nparr = np.frombuffer(img_bytes, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    if img is None:
+        raise ValueError("Cannot decode image")
+    
+    H, W = img.shape[:2]
+    mask = build_mask_cnc(img, color='nonwhite')
+    
+    # 2. Setup DXF
     dxf_version = VERSION_MAP.get(version, "AC1024")
     doc = ezdxf.new(dxf_version)
     msp = doc.modelspace()
     
-    # SVG unit is usually pixels (96 DPI)
-    # We'll treat 1 pixel = 1 unit then apply scale
+    # Scaling factor
     UNIT_MULT = {"mm": 1.0, "cm": 0.1, "m": 0.001, "inch": 1/25.4}
-    mult = UNIT_MULT.get(units, 1.0) / scale
+    mult = (UNIT_MULT.get(units, 1.0) / scale) # pixel-to-unit scale
 
-    ext = filename.lower().split('.')[-1]
-    with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as tmp_in:
-        tmp_in.write(img_bytes)
-        in_path = tmp_in.name
-    
-    out_svg = in_path + ".svg"
-    
+    # 3. Vectorize with OpenCV (Robust & Dependency-free)
     try:
-        # Vectorize image to SVG
-        vtracer.convert_image_to_svg_py(
-            in_path,
-            out_svg,
-            mode='spline',
-            colormode='binary',
-            hierarchical='stacked',
-            filter_speckle=4,
-            color_precision=6,
-            layer_difference=16,
-            corner_threshold=60,
-            length_threshold=4,
-            max_iterations=10,
-            splice_threshold=45,
-            path_precision=2
-        )
-        
+        paths = vectorize_opencv(mask, mult, img_h=H)
         entities = 0
-        if os.path.exists(out_svg):
-            doc_svg = minidom.parse(out_svg)
-            for path_el in doc_svg.getElementsByTagName('path'):
-                d = path_el.getAttribute('d')
-                if not d: continue
-                
-                # Split path by commands (M, L, C, etc.)
-                import re as _re
-                commands = _re.findall(r"([a-df-z][^a-df-z]*)", d, _re.I)
-                
-                all_points = []
-                for cmd in commands:
-                    cmd_type = cmd[0].upper()
-                    vals = _re.findall(r"[-+]?\d*\.\d+|\d+", cmd)
-                    pts = []
-                    for i in range(0, len(vals), 2):
-                        if i + 1 < len(vals):
-                            x = float(vals[i]) * mult
-                            y = -float(vals[i+1]) * mult
-                            pts.append((x, y))
-                    all_points.extend(pts)
-                
-                if len(all_points) >= 2:
-                    msp.add_lwpolyline(all_points, dxfattribs={"layer": "IMAGE_VECTORS"})
-                    entities += 1
-                
-            doc_svg.unlink()
+        for pts, closed in paths:
+            msp.add_lwpolyline(pts, close=closed, dxfattribs={"layer": "IMAGE_VECTORS"})
+            entities += 1
 
         stem = Path(filename).stem
         job_id = str(uuid.uuid4())
@@ -611,9 +682,11 @@ def do_convert_image(img_bytes, filename, version, scale, units):
             "entities": entities,
             "layers":   1,
         }
+    except Exception as e:
+        print(f"DEBUG: OpenCV Vectorization FAILED: {e}")
+        raise
     finally:
-        if os.path.exists(in_path): os.unlink(in_path)
-        if os.path.exists(out_svg): os.unlink(out_svg)
+        pass
 
 @app.get("/health")
 def health():
