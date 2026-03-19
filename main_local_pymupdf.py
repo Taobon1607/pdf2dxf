@@ -5,6 +5,7 @@ Dùng page.get_drawings() để lấy đầy đủ: color, fill, dashes, linewid
 import os, uuid, re, tempfile, math, sqlite3, secrets, string, json, requests
 from pathlib import Path
 from datetime import datetime, date
+import vtracer
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -528,6 +529,85 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
         "entities": entities,
         "layers":   len(layers),
     }
+def do_convert_image(img_bytes, filename, version, scale, units):
+    import ezdxf
+    import vtracer
+    import tempfile
+    import os
+    import xml.dom.minidom as minidom
+
+    dxf_version = VERSION_MAP.get(version, "AC1024")
+    doc = ezdxf.new(dxf_version)
+    msp = doc.modelspace()
+    
+    # SVG unit is usually pixels (96 DPI)
+    # We'll treat 1 pixel = 1 unit then apply scale
+    UNIT_MULT = {"mm": 1.0, "cm": 0.1, "m": 0.001, "inch": 1/25.4}
+    mult = UNIT_MULT.get(units, 1.0) / scale
+
+    with tempfile.NamedTemporaryFile(suffix=".img", delete=False) as tmp_in:
+        tmp_in.write(img_bytes)
+        in_path = tmp_in.name
+    
+    out_svg = in_path + ".svg"
+    
+    try:
+        # Vectorize image to SVG
+        vtracer.convert_image_to_svg_py(
+            in_path,
+            out_svg,
+            mode='spline',
+            colormode='binary', # Thường người dùng CAD thích đen trắng
+            hierarchical='stacked',
+            filter_speckle=4,
+            color_precision=6,
+            layer_difference=16,
+            corner_threshold=60,
+            length_threshold=4,
+            max_iterations=10,
+            splice_threshold=45,
+            path_precision=2
+        )
+        
+        entities = 0
+        if os.path.exists(out_svg):
+            doc_svg = minidom.parse(out_svg)
+            for path in doc_svg.getElementsByTagName('path'):
+                d = path.getAttribute('d')
+                color = path.getAttribute('fill') or "#000000"
+                # Parse simplified paths from vtracer (mostly L and M)
+                # vtracer spline mode produces many points
+                pts = []
+                # Simple parser for points in 'd' attribute
+                import re as _re
+                nums = _re.findall(r"[-+]?\d*\.\d+|\d+", d)
+                for i in range(0, len(nums), 2):
+                    if i + 1 < len(nums):
+                        x = float(nums[i]) * mult
+                        y = -float(nums[i+1]) * mult # Flip Y for CAD
+                        pts.append((x, y))
+                
+                if len(pts) >= 2:
+                    msp.add_lwpolyline(pts, dxfattribs={"layer": "IMAGE_VECTORS"})
+                    entities += 1
+            doc_svg.unlink()
+
+        stem = Path(filename).stem
+        job_id = str(uuid.uuid4())
+        out_name = f"{job_id}_{stem}.dxf"
+        doc.saveas(str(OUTPUT_DIR / out_name))
+        
+        return {
+            "job_id":   job_id,
+            "filename": f"{stem}.dxf",
+            "out_name": out_name,
+            "entities": entities,
+            "layers":   1,
+        }
+    finally:
+        if os.path.exists(in_path): os.unlink(in_path)
+        if os.path.exists(out_svg): os.unlink(out_svg)
+
 @app.get("/health")
 def health():
     return {"status": "ok", "version": "pymupdf", "time": datetime.utcnow().isoformat()}
@@ -560,8 +640,9 @@ async def convert(
     except:
         scale_f = 1.0
     f = files[0]
-    if not f.filename.lower().endswith(".pdf"):
-        raise HTTPException(400, "Not a PDF")
+    ext = f.filename.lower().split('.')[-1]
+    if ext not in ["pdf", "jpg", "jpeg", "png", "webp"]:
+        raise HTTPException(400, "Only PDF and Image files (JPG, PNG, WEBP) are supported.")
     file_content = await f.read()
     if len(file_content) > 200 * 1024 * 1024:
         raise HTTPException(413, "File too large")
@@ -570,7 +651,10 @@ async def convert(
         "include_hatch": include_hatch == "1",
     }
     try:
-        result = do_convert(file_content, f.filename, version, scale_f, units, opts)
+        if ext == "pdf":
+            result = do_convert(file_content, f.filename, version, scale_f, units, opts)
+        else:
+            result = do_convert_image(file_content, f.filename, version, scale_f, units)
     except Exception as e:
         import traceback
         raise HTTPException(500, f"Conversion failed: {e}\n{traceback.format_exc()}")

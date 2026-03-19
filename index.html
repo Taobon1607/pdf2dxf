@@ -636,7 +636,7 @@
   <section class="hero">
     <div class="badge">CAD-Quality Conversion Engine</div>
     <h1>
-      <span class="line-dim">PDF to DXF</span><br>
+      <span class="line-dim">PDF & Image to DXF</span><br>
       <span class="line-accent">that actually works</span>
     </h1>
     <p class="hero-sub">
@@ -663,12 +663,12 @@
           <rect x="10" y="46" width="36" height="4" rx="2" fill="#00e5ff" opacity="0.3"/>
         </svg>
       </div>
-      <div class="drop-title">Drop PDF files here</div>
+      <div class="drop-title">Drop files here</div>
       <div class="drop-sub">
-        or <strong>click to browse</strong> — supports vector &amp; scanned PDFs<br>
+        or <strong>click to browse</strong> — supports PDFs &amp; Images (JPG, PNG, WEBP)<br>
         <span style="font-family:'Space Mono',monospace;font-size:11px;opacity:0.6">Free: 3 files/day · 10MB max &nbsp;|&nbsp; Pro: unlimited · 100MB</span>
       </div>
-      <input type="file" id="fileInput" accept=".pdf" multiple>
+      <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.webp" multiple>
     </div>
     <!-- File Queue -->
     <div class="file-queue" id="fileQueue"></div>
@@ -869,6 +869,31 @@
       </tbody>
     </table>
   </section>
+  <!-- DXF vs DWG SEO Section -->
+  <section class="features" style="background: rgba(0,229,255,0.02); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 48px 0;">
+    <div class="container">
+      <div class="section-label" style="text-align:center">Industry Standards</div>
+      <h2 class="section-title" style="text-align:center">PDF to DWG or DXF?</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">📂</div>
+          <div class="feature-title">Universal DXF</div>
+          <div class="feature-desc">DXF is the open-standard alternative to DWG. It's compatible with 100% of AutoCAD versions and CNC software without "Non-Autodesk" binary errors.</div>
+        </div>
+        <div class="feature-card" style="border-color: var(--accent);">
+          <div class="feature-icon">✨</div>
+          <div class="feature-title">Better Compatibility</div>
+          <div class="feature-desc">When you convert <strong>PDF to DWG</strong> via DXF, you ensure that vector entities like layers, blocks, and text stay editable across all platforms.</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🏭</div>
+          <div class="feature-title">Factory Ready</div>
+          <div class="feature-desc">Most CNC, Laser, and Plasma cutters prefer DXF over DWG for direct machine path generation. Convert once, use everywhere.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Pricing -->
   <section class="pricing" id="pricing">
     <div class="section-label" style="text-align:center">Pricing</div>
@@ -1101,9 +1126,12 @@ dropZone.addEventListener('drop', e => {
 });
 fileInput.addEventListener('change', () => handleFiles([...fileInput.files]));
 function handleFiles(newFiles) {
-  const pdfs = newFiles.filter(f => f.type === 'application/pdf' || f.name.endsWith('.pdf'));
-  if (!pdfs.length) return;
-  files = [...files, ...pdfs].slice(0, 5);
+  const allowed = newFiles.filter(f => {
+    const ext = f.name.toLowerCase().split('.').pop();
+    return ['pdf', 'jpg', 'jpeg', 'png', 'webp'].includes(ext);
+  });
+  if (!allowed.length) return;
+  files = [...files, ...allowed].slice(0, 5);
   renderQueue();
   document.getElementById('btnConvert').disabled = false;
   hideResultError();
@@ -1206,9 +1234,9 @@ async function startConvert() {
 }
 async function pollStatus(jobId) {
   const statuses = [
-    [40, 'Detecting vector paths…'],
-    [55, 'Extracting lines and arcs…'],
-    [70, 'Mapping layers…'],
+    [40, 'Analysing file content…'],
+    [55, 'Vectorizing structures…'],
+    [70, 'Mapping CAD layers…'],
     [82, 'Writing DXF entities…'],
     [90, 'Finalising output file…'],
   ];
@@ -1482,10 +1510,10 @@ async function submitContactForm(e) {
     },
     {
       "@type": "Question",
-      "name": "Can I convert a scanned PDF drawing to DXF?",
+      "name": "Can I convert images (JPG/PNG) to DXF?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. pdf2dxf includes a raster-to-vector engine that detects lines, arcs and circles in scanned engineering drawings, plus OCR for dimension text and labels."
+        "text": "Yes. Our advanced Raster-to-Vector (R2V) engine supports converting JPG, PNG, and WEBP images directly into editable DXF entities for AutoCAD."
       }
     },
     {
