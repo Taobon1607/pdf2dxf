@@ -545,7 +545,8 @@ def do_convert_image(img_bytes, filename, version, scale, units):
     UNIT_MULT = {"mm": 1.0, "cm": 0.1, "m": 0.001, "inch": 1/25.4}
     mult = UNIT_MULT.get(units, 1.0) / scale
 
-    with tempfile.NamedTemporaryFile(suffix=".img", delete=False) as tmp_in:
+    ext = filename.lower().split('.')[-1]
+    with tempfile.NamedTemporaryFile(suffix=f".{ext}", delete=False) as tmp_in:
         tmp_in.write(img_bytes)
         in_path = tmp_in.name
     
@@ -557,7 +558,7 @@ def do_convert_image(img_bytes, filename, version, scale, units):
             in_path,
             out_svg,
             mode='spline',
-            colormode='binary', # Thường người dùng CAD thích đen trắng
+            colormode='binary',
             hierarchical='stacked',
             filter_speckle=4,
             color_precision=6,
@@ -572,24 +573,30 @@ def do_convert_image(img_bytes, filename, version, scale, units):
         entities = 0
         if os.path.exists(out_svg):
             doc_svg = minidom.parse(out_svg)
-            for path in doc_svg.getElementsByTagName('path'):
-                d = path.getAttribute('d')
-                color = path.getAttribute('fill') or "#000000"
-                # Parse simplified paths from vtracer (mostly L and M)
-                # vtracer spline mode produces many points
-                pts = []
-                # Simple parser for points in 'd' attribute
-                import re as _re
-                nums = _re.findall(r"[-+]?\d*\.\d+|\d+", d)
-                for i in range(0, len(nums), 2):
-                    if i + 1 < len(nums):
-                        x = float(nums[i]) * mult
-                        y = -float(nums[i+1]) * mult # Flip Y for CAD
-                        pts.append((x, y))
+            for path_el in doc_svg.getElementsByTagName('path'):
+                d = path_el.getAttribute('d')
+                if not d: continue
                 
-                if len(pts) >= 2:
-                    msp.add_lwpolyline(pts, dxfattribs={"layer": "IMAGE_VECTORS"})
+                # Split path by commands (M, L, C, etc.)
+                import re as _re
+                commands = _re.findall(r"([a-df-z][^a-df-z]*)", d, _re.I)
+                
+                all_points = []
+                for cmd in commands:
+                    cmd_type = cmd[0].upper()
+                    vals = _re.findall(r"[-+]?\d*\.\d+|\d+", cmd)
+                    pts = []
+                    for i in range(0, len(vals), 2):
+                        if i + 1 < len(vals):
+                            x = float(vals[i]) * mult
+                            y = -float(vals[i+1]) * mult
+                            pts.append((x, y))
+                    all_points.extend(pts)
+                
+                if len(all_points) >= 2:
+                    msp.add_lwpolyline(all_points, dxfattribs={"layer": "IMAGE_VECTORS"})
                     entities += 1
+                
             doc_svg.unlink()
 
         stem = Path(filename).stem
