@@ -1262,6 +1262,16 @@ function showResult(data) {
   const link = document.getElementById('btnDownload');
   link.href = `${API_BASE}/download/${data.job_id}`;
   link.download = data.filename;
+  
+  // Track conversion in Google Analytics
+  if (typeof gtag === 'function') {
+    gtag('event', 'generate_dxf_success', {
+      'event_category': 'conversion',
+      'event_label': data.filename,
+      'entities_count': data.entities,
+      'layers_count': data.layers
+    });
+  }
 }
 function showError(msg) {
   hideProgress();
