@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6D2KCTWQYL"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-6D2KCTWQYL');
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF to SolidWorks DXF: How to Import Drawings Without Errors | pdf2dxf.us</title>
+<meta name="description" content="Struggling to import PDF drawings into SolidWorks? Learn how to convert PDFs to high-quality DXF files that preserve scale and geometry.">
+<link rel="canonical" href="https://pdf2dxf.us/blog-pdf-to-solidworks-dxf.html">
+
+<!-- Open Graph -->
+<meta property="og:title" content="PDF to SolidWorks DXF Conversion Guide | pdf2dxf.us">
+<meta property="og:description" content="The professional way to bring legacy PDF drawings into SolidWorks as editable geometry.">
+<meta property="og:url" content="https://pdf2dxf.us/blog-pdf-to-solidworks-dxf.html">
+<meta property="og:type" content="article">
+<meta property="og:image" content="https://pdf2dxf.us/og-image.png">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="SolidWorks Workflow: PDF to DXF | pdf2dxf.us">
+<meta name="twitter:description" content="Import as-built drawings into SolidWorks easily.">
+<meta name="twitter:image" content="https://pdf2dxf.us/og-image.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0d0d14;
+    --surface:   #16161f;
+    --border:    #2a2a3e;
+    --accent:    #00e5ff;
+    --text:      #f0f0f8;
+    --muted:     #9090b0;
+    --grid:      rgba(0,229,255,0.04);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    line-height: 1.6;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+    z-index: -1;
+  }
+  .container { max-width: 800px; margin: 0 auto; padding: 0 24px; }
+  header { padding: 28px 0; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+  .logo { font-family: 'Space Mono', monospace; font-size: 18px; color: var(--accent); text-decoration: none; }
+  .logo span { color: var(--muted); }
+  nav a { color: var(--muted); text-decoration: none; font-size: 13px; margin-left: 24px; text-transform: uppercase; }
+  
+  article { padding: 64px 0; }
+  .badge { display: inline-block; background: rgba(0,229,255,0.1); color: var(--accent); padding: 4px 12px; border-radius: 100px; font-size: 11px; font-family: 'Space Mono', monospace; margin-bottom: 16px; }
+  h1 { font-size: clamp(32px, 5vw, 48px); font-weight: 800; line-height: 1.2; margin-bottom: 24px; }
+  .meta { color: var(--muted); font-family: 'Space Mono', monospace; font-size: 13px; margin-bottom: 48px; border-bottom: 1px solid var(--border); padding-bottom: 24px; }
+  
+  .content h2 { font-size: 24px; margin: 48px 0 20px; color: var(--accent); }
+  .content p { margin-bottom: 20px; font-size: 17px; color: #d0d0e0; }
+  .content ul { margin: 20px 0 20px 24px; color: #d0d0e0; }
+  .content li { margin-bottom: 12px; }
+  
+  .cta-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; margin-top: 64px; text-align: center; }
+  .btn { display: inline-block; background: var(--accent); color: #000; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 700; font-family: 'Space Mono', monospace; margin-top: 16px; transition: 0.2s; }
+  .btn:hover { background: #33ecff; transform: translateY(-2px); }
+  
+  footer { padding: 48px 0; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--muted); font-family: 'Space Mono', monospace; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <a href="index.html" class="logo">pdf<span>2</span>dxf<span>.us</span></a>
+    <nav>
+      <a href="guides.html">Back to Guides</a>
+      <a href="index.html">Home</a>
+    </nav>
+  </header>
+
+  <article>
+    <span class="badge">Workflow Optimization</span>
+    <h1>PDF to SolidWorks: How to Smoothly Import Drawings into your Sketch</h1>
+    <div class="meta">Updated: March 20, 2026 • By pdf2dxf Engineering Team</div>
+
+    <div class="content">
+      <p>SolidWorks is a powerful tool for 3D modeling, but its built-in PDF import features often leave engineers frustrated. You might find that the geometry is scaled incorrectly, or that a simple circle is broken into 360 separate line segments.</p>
+      <p>In this guide, we'll show you how to leverage a high-quality DXF bridge to bring legacy drawings into SolidWorks sketches as clean, editable geometry.</p>
+
+      <h2>1. The Problem with Direct Drawing Import</h2>
+      <p>If you insert a PDF directly into a SolidWorks sheet, it often acts like a "picture" rather than real geometry. You can't snap to midpoints, and you certainly can't extrude features from it. To make it "workable," you need to convert it into a vector format that SolidWorks natively understands: **DXF**.</p>
+
+      <h2>2. Choosing the Right DXF Version</h2>
+      <p>SolidWorks is generally very compatible with modern DXF files, but for the most stable import, we recommend using the **R2010 or R2013** format. At <code>pdf2dxf.us</code>, you can select these versions in the dropdown menu before converting.</p>
+
+      <h2>3. Scaling Before You Import</h2>
+      <p>One of the biggest headaches in SolidWorks is importing a 1:50 drawing and having it appear at the wrong size. Instead of scaling inside SolidWorks (which can be clunky), use our **Scale Factor** tool. If your drawing is 1:100, set the scale to 100 during conversion — your DXF will open in SolidWorks at its true real-world dimensions.</p>
+
+      <h2>4. Importing into a Sketch</h2>
+      <p>To use the DXF data in a 3D model:
+        <ul>
+          <li>Open SolidWorks and start a new part.</li>
+          <li>Choose a plane and start a new **Sketch**.</li>
+          <li>Go to **Insert > DXF/DWG...** and select your converted file.</li>
+          <li>Choose "Import to a new part as 2D sketch".</li>
+          <li>Uncheck any layers you don't need (like borders or title blocks) to keep your workspace clean.</li>
+        </ul>
+      </p>
+    </div>
+
+    <div class="cta-box">
+      <h3>Speed up your SolidWorks workflow</h3>
+      <p>Convert your legacy PDFs to clean, scaled DXF files now.</p>
+      <a href="index.html" class="btn">Get Started Now</a>
+    </div>
+  </article>
+
+  <footer>
+    © 2026 pdf2dxf.us — Built for engineers
+  </footer>
+</div>
+</body>
+</html>

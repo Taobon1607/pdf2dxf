@@ -981,6 +981,31 @@
       </div>
     </div>
   </section>
+  <!-- FAQ Section -->
+  <section class="faq" id="faq" style="padding: 64px 0; border-top: 1px solid var(--border);">
+    <div class="container">
+      <div class="section-label" style="text-align:center">Common Questions</div>
+      <h2 class="section-title" style="text-align:center">Frequently Asked Questions</h2>
+      <div style="max-width: 700px; margin: 0 auto; display: grid; gap: 24px;">
+        <div class="faq-item">
+          <h3 style="font-size:18px; color:var(--accent); margin-bottom:12px;">How do I convert PDF to DXF online for free?</h3>
+          <p style="font-size:15px; color:var(--muted); line-height:1.6;">Simply upload your file, choose your AutoCAD version and scale, and click "Convert". Free users get 3 conversions per day without needing an account.</p>
+        </div>
+        <div class="faq-item">
+          <h3 style="font-size:18px; color:var(--accent); margin-bottom:12px;">Is the DXF output compatible with CNC machines?</h3>
+          <p style="font-size:15px; color:var(--muted); line-height:1.6;">Yes. We use polyline optimization and arc detection to ensure paths are clean for laser, plasma, and waterjet cutters. No "double lines" or overlapping geometry.</p>
+        </div>
+        <div class="faq-item">
+          <h3 style="font-size:18px; color:var(--accent); margin-bottom:12px;">Can I import the DXF into SolidWorks?</h3>
+          <p style="font-size:15px; color:var(--muted); line-height:1.6;">Absolutely. Use our built-in Scale Factor tool to match your drawing units. Our DXF R2013 output is ideal for SolidWorks sketches.</p>
+        </div>
+        <div class="faq-item">
+          <h3 style="font-size:18px; color:var(--accent); margin-bottom:12px;">Do you support scanned "Raster" PDFs?</h3>
+          <p style="font-size:15px; color:var(--muted); line-height:1.6;">Yes, Pro users have access to our advanced Raster-to-Vector (R2V) engine which uses OCR and line-thinning algorithms to convert pixels into editable CAD entities.</p>
+        </div>
+      </div>
+    </div>
+  </section>
   <!-- Payment Modal -->
   <div id="paymentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:1000;align-items:center;justify-content:center;padding:16px">
     <div style="background:#16161f;border:1px solid #2a2a3e;border-radius:16px;width:480px;max-width:100%;max-height:90vh;overflow-y:auto;position:relative">
@@ -1574,6 +1599,14 @@ async function submitContactForm(e) {
       "acceptedAnswer": {
         "@type": "Answer",
         "text": "Yes. Our advanced Raster-to-Vector (R2V) engine supports converting JPG, PNG, and WEBP images directly into editable DXF entities for AutoCAD."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How to import PDF to SolidWorks as a sketch?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Convert your PDF to a DXF R2013 using pdf2dxf.us with the correct scale factor, then use the 'Insert > DXF/DWG' command inside a SolidWorks sketch."
       }
     },
     {
