@@ -753,13 +753,24 @@
       <span class="usage-text" id="usageText"><strong id="usageCount">5</strong> free conversions remaining today</span>
       <button class="btn-pro" onclick="scrollToPricing()">Upgrade Pro →</button>
     </div>
-    <!-- Pro Key input -->
+    <!-- Pro Key / Promo Code input -->
     <div id="proKeyWrap" style="margin-top:10px;display:flex;gap:8px;align-items:center">
-      <input type="text" id="proKeyInput" placeholder="Pro key (optional)"
+      <input type="text" id="proKeyInput" placeholder="Pro key or promo code"
         style="flex:1;background:#1a1a2e;border:1px solid var(--border);color:var(--text);
                padding:8px 12px;border-radius:6px;font-family:'Space Mono',monospace;font-size:12px;"
         oninput="onProKeyChange(this.value)">
       <span id="proKeyStatus" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+    <!-- Promo redeem modal trigger (shown when promo code detected) -->
+    <div id="promoEmailWrap" style="display:none;margin-top:8px;display:none;gap:8px;align-items:center">
+      <input type="email" id="promoEmailInput" placeholder="Enter your email to redeem promo"
+        style="flex:1;background:#1a1a2e;border:1px solid #00e5ff;color:var(--text);
+               padding:8px 12px;border-radius:6px;font-family:'Space Mono',monospace;font-size:12px;">
+      <button onclick="redeemPromo()"
+        style="padding:8px 16px;background:#00e5ff;color:#000;border:none;border-radius:6px;
+               font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap">
+        Redeem →
+      </button>
     </div>
   </div><!-- /upload-card -->
   <!-- AdSense slot -->
@@ -1171,22 +1182,67 @@ function updateUsageUI(data) {
   }
 }
 async function onProKeyChange(val) {
-  proKey = val.trim();
+  proKey = val.trim().toUpperCase();
   localStorage.setItem('proKey', proKey);
+  const promoWrap = document.getElementById('promoEmailWrap');
+  const status = document.getElementById('proKeyStatus');
+
   if (!proKey) {
-    document.getElementById('proKeyStatus').textContent = '';
+    status.textContent = '';
+    promoWrap.style.display = 'none';
     loadUsage();
     return;
   }
+
+  // Detect promo code format (e.g. PH26-XXXX-XXXX) vs pro key (PRO-...)
+  const isPromoFormat = /^[A-Z]{2,6}-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(proKey) && !proKey.startsWith('PRO-');
+  if (isPromoFormat) {
+    status.textContent = '🎟 Promo code — enter email to redeem';
+    status.style.color = '#ff6b35';
+    promoWrap.style.display = 'flex';
+    return;
+  }
+
+  // Regular pro key check
+  promoWrap.style.display = 'none';
   try {
     const res = await fetch(`${API_BASE}/usage?pro_key=${encodeURIComponent(proKey)}`);
     const data = await res.json();
     updateUsageUI(data);
     if (!data.is_pro) {
-      document.getElementById('proKeyStatus').textContent = '✗ Invalid key';
-      document.getElementById('proKeyStatus').style.color = 'var(--error)';
+      status.textContent = '✗ Invalid key';
+      status.style.color = 'var(--error)';
     }
   } catch(e) {}
+}
+
+async function redeemPromo() {
+  const code = document.getElementById('proKeyInput').value.trim().toUpperCase();
+  const email = document.getElementById('promoEmailInput').value.trim();
+  if (!email || !email.includes('@')) { alert('Please enter a valid email address'); return; }
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  try {
+    const fd = new FormData();
+    fd.append('code', code);
+    fd.append('email', email);
+    const res = await fetch(`${API_BASE}/promo/redeem`, { method: 'POST', body: fd });
+    const data = await res.json();
+    if (res.ok) {
+      document.getElementById('proKeyStatus').textContent = '✓ Key sent to your email!';
+      document.getElementById('proKeyStatus').style.color = 'var(--success)';
+      document.getElementById('promoEmailWrap').style.display = 'none';
+    } else {
+      alert(data.detail || 'Error redeeming promo code');
+      btn.disabled = false;
+      btn.textContent = 'Redeem →';
+    }
+  } catch(e) {
+    alert('Cannot connect to server. Please try again.');
+    btn.disabled = false;
+    btn.textContent = 'Redeem →';
+  }
 }
 loadUsage();
 updateUsageUI();

@@ -105,7 +105,7 @@ tbody td { padding: 12px; }
       </div>
     </div>
 
-    <!-- Create Key -->
+    <!-- Create Pro Key -->
     <div class="section">
       <h2>Create Pro Key</h2>
       <div class="create-form">
@@ -119,6 +119,23 @@ tbody td { padding: 12px; }
         <button onclick="createKey()">+ Create Key</button>
       </div>
       <p style="font-size:12px;color:#9090b0">If SMTP is configured, key is emailed automatically. Otherwise copy & send manually.</p>
+    </div>
+
+    <!-- Promo Codes -->
+    <div class="section">
+      <h2>Promo Codes</h2>
+      <div class="create-form" style="margin-bottom:12px">
+        <input type="text" id="promoCode" placeholder="Code (e.g. PH26-JXSA-UVZT)" style="text-transform:uppercase">
+        <select id="promoPlan" style="padding:10px 14px;background:#0f0f17;border:1px solid #2a2a3e;color:#e0e0f0;border-radius:8px;font-size:13px">
+          <option value="monthly">Monthly (30 days)</option>
+          <option value="yearly">Yearly (1 year)</option>
+          <option value="lifetime">Lifetime</option>
+        </select>
+        <input type="number" id="promoMaxUses" placeholder="Max uses (0=unlimited)" min="0" style="width:180px;padding:10px 14px;background:#0f0f17;border:1px solid #2a2a3e;color:#e0e0f0;border-radius:8px;font-size:13px">
+        <input type="text" id="promoLabel" placeholder="Label (e.g. Product Hunt 2026)">
+        <button onclick="createPromo()">+ Create Promo</button>
+      </div>
+      <div id="promosContainer"><div class="empty">Loading...</div></div>
     </div>
 
     <!-- Keys Table -->
@@ -160,7 +177,7 @@ function logout() {
 }
 
 async function loadAll() {
-  await Promise.all([loadStats(), loadKeys()]);
+  await Promise.all([loadStats(), loadKeys(), loadPromos()]);
 }
 
 async function loadStats() {
@@ -250,6 +267,51 @@ function showToast(msg, isError = false) {
   t.style.color = isError ? '#fff' : '#000';
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+async function loadPromos() {
+  try {
+    const res = await fetch(`${API_BASE}/admin/promo-stats?secret=${encodeURIComponent(secret)}`);
+    const d = await res.json();
+    const container = document.getElementById('promosContainer');
+    if (!d.codes?.length) { container.innerHTML = '<div class="empty">No promo codes yet.</div>'; return; }
+    container.innerHTML = `<table><thead><tr>
+      <th>Code</th><th>Plan</th><th>Uses</th><th>Max uses</th><th>Label</th><th>Status</th>
+    </tr></thead><tbody>
+      ${d.codes.map(c => `<tr>
+        <td class="key-cell">${c.code}</td>
+        <td>${c.plan}</td>
+        <td style="color:var(--accent)">${c.uses}</td>
+        <td style="color:#9090b0">${c.max_uses}</td>
+        <td style="color:#9090b0">${c.label||'—'}</td>
+        <td>${c.active ? '<span class="badge-active">Active</span>' : '<span class="badge-revoked">Disabled</span>'}</td>
+      </tr>`).join('')}
+    </tbody></table>`;
+  } catch(e) {
+    document.getElementById('promosContainer').innerHTML = '<div class="empty">Could not load promos.</div>';
+  }
+}
+
+async function createPromo() {
+  const code = document.getElementById('promoCode').value.trim().toUpperCase();
+  const plan = document.getElementById('promoPlan').value;
+  const maxUses = parseInt(document.getElementById('promoMaxUses').value) || 0;
+  const label = document.getElementById('promoLabel').value.trim();
+  if (!code) { showToast('Enter a promo code', true); return; }
+  const fd = new FormData();
+  fd.append('secret', secret);
+  fd.append('code', code);
+  fd.append('plan', plan);
+  fd.append('max_uses', maxUses);
+  fd.append('label', label || 'Promo');
+  const res = await fetch(`${API_BASE}/admin/create-promo`, { method: 'POST', body: fd });
+  const d = await res.json();
+  document.getElementById('promoCode').value = '';
+  document.getElementById('promoLabel').value = '';
+  document.getElementById('promoMaxUses').value = '';
+  const maxText = maxUses > 0 ? `${maxUses} uses` : 'unlimited';
+  showToast(`Created: ${d.code} · ${d.plan} · ${maxText}`);
+  loadAll();
 }
 
 document.getElementById('secretInput').focus();

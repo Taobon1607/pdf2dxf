@@ -44,6 +44,28 @@ def get_db():
     except: pass
     try: conn.execute("ALTER TABLE pro_keys ADD COLUMN expires_at TEXT")
     except: pass
+    # Promo codes table
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS promo_codes (
+            code TEXT PRIMARY KEY,
+            plan TEXT DEFAULT 'monthly',
+            label TEXT,
+            max_uses INTEGER DEFAULT 0,
+            uses INTEGER DEFAULT 0,
+            active INTEGER DEFAULT 1,
+            created TEXT,
+            expires_at TEXT
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS promo_redemptions (
+            code TEXT NOT NULL,
+            email TEXT NOT NULL,
+            redeemed_at TEXT,
+            pro_key TEXT,
+            PRIMARY KEY (code, email)
+        )
+    """)
     conn.commit()
     return conn
 FREE_LIMIT = 5  # lượt free mỗi ngày
@@ -1079,6 +1101,113 @@ async def paypal_webhook(request: Request):
     except Exception as e:
         print(f"PayPal webhook error: {e}")
         return {"status": "error"}
+@app.post("/promo/redeem")
+async def redeem_promo(
+    request: Request,
+    code: str = Form(...),
+    email: str = Form(...),
+):
+    """Khách nhập promo code + email → nhận pro key qua email"""
+    code = code.strip().upper()
+    email = email.strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(400, "Invalid email")
+
+    conn = get_db()
+    # Check code exists and active
+    row = conn.execute(
+        "SELECT plan, max_uses, uses, active, expires_at FROM promo_codes WHERE code=?", (code,)
+    ).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(404, "Invalid promo code")
+    plan, max_uses, uses, active, expires_at = row
+    if not active:
+        conn.close()
+        raise HTTPException(400, "This promo code has expired")
+    if max_uses > 0 and uses >= max_uses:
+        conn.close()
+        raise HTTPException(400, "This promo code has reached its usage limit")
+    if expires_at and expires_at < date.today().isoformat():
+        conn.close()
+        raise HTTPException(400, "This promo code has expired")
+
+    # Check email hasn't redeemed this code already
+    already = conn.execute(
+        "SELECT 1 FROM promo_redemptions WHERE code=? AND email=?", (code, email)
+    ).fetchone()
+    if already:
+        conn.close()
+        raise HTTPException(400, "This email has already used this promo code")
+
+    # Generate pro key and record redemption
+    result = generate_pro_key(email=email, label=f"Promo:{code}", plan=plan)
+    conn.execute(
+        "INSERT INTO promo_redemptions (code, email, redeemed_at, pro_key) VALUES (?,?,?,?)",
+        (code, email, datetime.utcnow().isoformat(), result["key"])
+    )
+    conn.execute("UPDATE promo_codes SET uses = uses + 1 WHERE code=?", (code,))
+    conn.commit()
+    conn.close()
+
+    # Send email
+    email_sent = send_key_email(email, result["key"], plan, result.get("expires_at", ""))
+    return {
+        "success": True,
+        "message": f"Pro key sent to {email}",
+        "email_sent": email_sent,
+        "expires_at": result.get("expires_at")
+    }
+
+@app.post("/admin/create-promo")
+def create_promo(
+    secret: str = Form(...),
+    code: str = Form(...),
+    plan: str = Form(default="monthly"),
+    max_uses: int = Form(default=0),
+    label: str = Form(default=""),
+):
+    """Tạo promo code (max_uses=0 = unlimited)"""
+    if secret != ADMIN_SECRET:
+        raise HTTPException(403, "Forbidden")
+    code = code.strip().upper()
+    conn = get_db()
+    conn.execute(
+        "INSERT OR REPLACE INTO promo_codes (code, plan, label, max_uses, uses, active, created) VALUES (?,?,?,?,0,1,?)",
+        (code, plan, label, max_uses, datetime.utcnow().isoformat())
+    )
+    conn.commit()
+    conn.close()
+    return {"code": code, "plan": plan, "max_uses": max_uses if max_uses > 0 else "unlimited"}
+
+@app.get("/admin/promo-stats")
+def promo_stats(secret: str = "", code: str = ""):
+    """Xem stats của promo code"""
+    if secret != ADMIN_SECRET:
+        raise HTTPException(403, "Forbidden")
+    conn = get_db()
+    if code:
+        row = conn.execute(
+            "SELECT code, plan, max_uses, uses, active FROM promo_codes WHERE code=?",
+            (code.upper(),)
+        ).fetchone()
+        redemptions = conn.execute(
+            "SELECT email, redeemed_at FROM promo_redemptions WHERE code=? ORDER BY redeemed_at DESC",
+            (code.upper(),)
+        ).fetchall()
+        conn.close()
+        if not row: raise HTTPException(404, "Code not found")
+        return {
+            "code": row[0], "plan": row[1],
+            "max_uses": row[2] or "unlimited", "uses": row[3], "active": row[4],
+            "redemptions": [{"email": r[0], "at": r[1]} for r in redemptions]
+        }
+    rows = conn.execute(
+        "SELECT code, plan, max_uses, uses, active FROM promo_codes ORDER BY created DESC"
+    ).fetchall()
+    conn.close()
+    return {"codes": [{"code": r[0], "plan": r[1], "max_uses": r[2] or "unlimited", "uses": r[3], "active": r[4]} for r in rows]}
+
 @app.get("/admin/stats")
 def stats(secret: str = ""):
     if secret != ADMIN_SECRET:
