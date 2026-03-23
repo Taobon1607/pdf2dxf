@@ -78,6 +78,20 @@
   
   footer { padding: 48px 0; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--muted); font-family: 'Space Mono', monospace; }
 </style>
+
+<script>
+// Nếu đang chạy trên github.io → add noindex để tránh duplicate content
+if (window.location.hostname.includes('github.io')) {
+  var meta = document.createElement('meta');
+  meta.name = 'robots';
+  meta.content = 'noindex, nofollow';
+  document.head.appendChild(meta);
+  // Redirect về domain chính
+  window.location.replace(window.location.href.replace(
+    /taobon1607\.github\.io\/pdf2dxf/, 'pdf2dxf.us'
+  ));
+}
+</script>
 </head>
 <body>
 <div class="container">
@@ -132,6 +146,41 @@
     © 2026 pdf2dxf.us — Built for engineers
   </footer>
 </div>
+
+  <h2>Why PDF Font Encoding Breaks in AutoCAD</h2>
+  <p>When AutoCAD plots a drawing to PDF, text entities go through a two-stage encoding process. First, AutoCAD maps its internal font (SHX, TTF, or BigFont) to a PDF font resource. Second, the PDF renderer encodes each character using the font's internal glyph mapping — which may or may not correspond to standard Unicode code points.</p>
+  <p>The problem occurs specifically with AutoCAD SHX fonts (simplex.shx, romans.shx, etc.) and custom company fonts. These fonts were designed in the 1980s before Unicode existed, and their glyph-to-character mapping is non-standard. When a PDF reader or converter tries to extract text from these glyphs, it either produces question marks, empty strings, or random Unicode characters because the reverse-mapping table is missing from the PDF file.</p>
+  <p>Standard TrueType fonts like Arial, Times New Roman, and Calibri embed proper Unicode mapping tables and convert correctly in nearly all cases.</p>
+
+  <h2>How to Identify Which Fonts Are Causing Problems</h2>
+  <p>In Adobe Acrobat or the free Adobe Reader, open the PDF → File → Properties → Fonts tab. Any font listed as "Type 3" or showing "(Embedded Subset)" without a proper Unicode name is a candidate for text extraction failure. SHX-derived fonts often appear as generic names like "GDT", "Monotxt", or a filename without a recognizable typeface name.</p>
+  <p>A simpler test: open the PDF, try to select and copy text with Ctrl+A → Ctrl+C, then paste into Notepad. If the pasted result shows garbage characters or nothing at all, text extraction will fail in any converter — not just pdf2dxf.</p>
+
+  <h2>Fix Method 1 — Re-export from the Source DWG</h2>
+  <p>If you have access to the original DWG file, this is the most reliable fix. Open the DWG in AutoCAD → change all SHX text styles to Arial or another standard TTF font → re-plot to PDF. The resulting PDF will have extractable Unicode text.</p>
+  <p>To change text styles in AutoCAD: type STYLE → select each text style → change the Font Name from an SHX file to "Arial" (or another TTF) → Apply. Then use PLOT or PUBLISH to create a new PDF.</p>
+
+  <h2>Fix Method 2 — Use AutoCAD's "Convert to Text" When Importing DXF</h2>
+  <p>When you open a DXF recovered from a PDF with font issues, AutoCAD may prompt you to substitute missing fonts. At this dialog, map the missing font to Arial or Romans. The geometry of the text entity (position, height, rotation) is preserved even when the font mapping fails — only the rendered characters are wrong.</p>
+
+  <h2>Fix Method 3 — Manual Re-annotation</h2>
+  <p>For drawings where only specific text elements matter (dimension values, grid labels), the fastest approach is often to treat the converted DXF as a geometry base and add new text manually. The structural lines, walls, and grid are correctly converted; only the annotation layer needs to be re-entered. This takes 15–30 minutes for a typical floor plan and produces cleaner results than attempting automated font repair.</p>
+
+  <h2>What pdf2dxf Does With Unrecognizable Text</h2>
+  <p>When pdf2dxf encounters a text span where PyMuPDF cannot map glyphs to Unicode (common with embedded SHX fonts), it skips that span rather than outputting garbage characters. This means some text entities will be missing from the output rather than present but unreadable — a deliberate choice to keep the DXF clean for the geometry that does convert correctly.</p>
+  <p>Text that uses standard fonts (Arial, Calibri, Times New Roman, and most system TTF fonts) converts reliably with correct character content, font height, position, and rotation angle.</p>
+
+  <h2>Font Support Reference</h2>
+  <table>
+    <thead><tr><th>Font type</th><th>PDF text extraction</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>TrueType (Arial, Calibri, etc.)</td><td>✓ Reliable</td><td>Full Unicode mapping</td></tr>
+      <tr><td>AutoCAD SHX (simplex, romans)</td><td>✗ Often fails</td><td>No Unicode mapping in PDF</td></tr>
+      <tr><td>Symbol / Wingdings</td><td>✗ Fails</td><td>Non-Unicode glyph set</td></tr>
+      <tr><td>Custom company fonts</td><td>Varies</td><td>Depends on embedding</td></tr>
+      <tr><td>OpenType (OTF)</td><td>✓ Usually works</td><td>Most have Unicode tables</td></tr>
+    </tbody>
+  </table>
 
   <!-- Internal Link CTA -->
   <div style="margin:48px 0;padding:32px;background:#0d0d14;border:1px solid #2a2a3e;border-radius:12px;text-align:center">

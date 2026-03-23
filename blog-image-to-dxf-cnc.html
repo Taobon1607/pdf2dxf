@@ -94,6 +94,20 @@
   
   footer { padding: 48px 0; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--muted); font-family: 'Space Mono', monospace; }
 </style>
+
+<script>
+// Nếu đang chạy trên github.io → add noindex để tránh duplicate content
+if (window.location.hostname.includes('github.io')) {
+  var meta = document.createElement('meta');
+  meta.name = 'robots';
+  meta.content = 'noindex, nofollow';
+  document.head.appendChild(meta);
+  // Redirect về domain chính
+  window.location.replace(window.location.href.replace(
+    /taobon1607\.github\.io\/pdf2dxf/, 'pdf2dxf.us'
+  ));
+}
+</script>
 </head>
 <body>
 <div class="container">

@@ -77,6 +77,20 @@
   
   footer { padding: 48px 0; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--muted); font-family: 'Space Mono', monospace; }
 </style>
+
+<script>
+// Nếu đang chạy trên github.io → add noindex để tránh duplicate content
+if (window.location.hostname.includes('github.io')) {
+  var meta = document.createElement('meta');
+  meta.name = 'robots';
+  meta.content = 'noindex, nofollow';
+  document.head.appendChild(meta);
+  // Redirect về domain chính
+  window.location.replace(window.location.href.replace(
+    /taobon1607\.github\.io\/pdf2dxf/, 'pdf2dxf.us'
+  ));
+}
+</script>
 </head>
 <body>
 <div class="container">
@@ -137,6 +151,43 @@
     © 2026 pdf2dxf.us — Built for engineers
   </footer>
 </div>
+
+  <h2>Understanding the Two Types of PDF Drawings</h2>
+  <p>Before choosing a conversion approach, it is important to distinguish between two fundamentally different types of PDF engineering drawings.</p>
+  <p>A <strong>vector PDF</strong> is created when AutoCAD, Revit, or another CAD application plots directly to PDF. The drawing geometry is stored as mathematical paths — lines, arcs, and curves with precise coordinates. A PDF-to-DXF converter can extract these paths and reconstruct the original geometry with high accuracy.</p>
+  <p>A <strong>raster PDF</strong> (scanned PDF) contains only a bitmap image of the drawing — essentially a photograph of paper. There is no geometric data to extract. Converting a scanned PDF to DXF requires Raster-to-Vector (R2V) conversion, which uses image processing algorithms to detect lines and edges in the pixel data and reconstruct approximate vector geometry.</p>
+  <p>The conversion quality difference is significant: vector PDF conversion preserves original precision (sub-millimeter accuracy), while scanned PDF conversion is approximate and depends heavily on scan quality, resolution, and drawing complexity.</p>
+
+  <h2>How to Tell if Your PDF is Vector or Scanned</h2>
+  <p>Open the PDF in Adobe Acrobat Reader. Try to select a line by clicking on it. If you can select individual lines or text strings, it is a vector PDF. If clicking selects a rectangular region of pixels, it is a scanned (raster) PDF.</p>
+  <p>Another method: zoom in to 400% or more. Vector lines remain crisp at any zoom level. Scanned lines become pixelated.</p>
+
+  <h2>Converting a Scanned PDF — Step by Step</h2>
+  <p>The conversion pipeline for a scanned drawing has multiple stages, each affecting the final quality.</p>
+
+  <h3>Stage 1: Image preprocessing</h3>
+  <p>Before vectorization, the scanned image needs cleaning. Common issues include background noise (paper texture, coffee stains), inconsistent line weights, and skew (the paper was not perfectly aligned on the scanner). Preprocessing steps: convert to high-contrast black and white (not grayscale), deskew the image, and remove speckle noise. These steps significantly improve vectorization accuracy.</p>
+
+  <h3>Stage 2: Line detection (vectorization)</h3>
+  <p>Vectorization algorithms trace the boundaries of dark regions in the image to produce vector paths. Simple algorithms detect straight line segments; more advanced ones detect arcs and splines. The output quality depends on image resolution (300 DPI minimum, 600 DPI recommended for detailed drawings), line contrast, and whether lines are clearly separated or touching.</p>
+
+  <h3>Stage 3: Geometry cleanup</h3>
+  <p>Raw vectorization output typically contains overshoots at corners (lines that extend past their intersection), multiple short segments where a single long line should be, and approximated circles that are actually irregular polygons. Post-processing with AutoCAD's OVERKILL, EXTEND, TRIM, and FILLET commands is usually required to produce usable geometry.</p>
+
+  <h2>Scan Quality Requirements</h2>
+  <table>
+    <thead><tr><th>Drawing type</th><th>Min DPI</th><th>Recommended DPI</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Large format (A0, A1)</td><td>200</td><td>400</td><td>Line weight critical at this size</td></tr>
+      <tr><td>A2 / A3 drawings</td><td>300</td><td>600</td><td>Standard engineering drawings</td></tr>
+      <tr><td>A4 detail sheets</td><td>300</td><td>600</td><td>Often has fine text</td></tr>
+      <tr><td>Drawings with small text</td><td>400</td><td>800</td><td>Text recognition requires higher DPI</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Realistic Expectations for Scanned Drawing Conversion</h2>
+  <p>Even with excellent scan quality, scanned PDF to AutoCAD conversion cannot match the accuracy of vector PDF conversion. Typical accuracy for a well-scanned A1 drawing at 400 DPI is ±1-2mm at full scale — adequate for reference geometry but not for manufacturing or construction dimensions that require sub-millimeter precision.</p>
+  <p>For critical dimensions, always verify against the original drawing notation rather than relying on measured coordinates from the converted geometry.</p>
 
   <!-- Internal Link CTA -->
   <div style="margin:48px 0;padding:32px;background:#0d0d14;border:1px solid #2a2a3e;border-radius:12px;text-align:center">

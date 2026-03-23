@@ -77,6 +77,20 @@
   
   footer { padding: 48px 0; border-top: 1px solid var(--border); text-align: center; font-size: 12px; color: var(--muted); font-family: 'Space Mono', monospace; }
 </style>
+
+<script>
+// Nếu đang chạy trên github.io → add noindex để tránh duplicate content
+if (window.location.hostname.includes('github.io')) {
+  var meta = document.createElement('meta');
+  meta.name = 'robots';
+  meta.content = 'noindex, nofollow';
+  document.head.appendChild(meta);
+  // Redirect về domain chính
+  window.location.replace(window.location.href.replace(
+    /taobon1607\.github\.io\/pdf2dxf/, 'pdf2dxf.us'
+  ));
+}
+</script>
 </head>
 <body>
 <div class="container">
@@ -124,6 +138,51 @@
     © 2026 pdf2dxf.us — Built for engineers
   </footer>
 </div>
+
+  <h2>Why DXF Quality Matters for CNC Cutting</h2>
+  <p>CNC laser, plasma, and waterjet machines read toolpaths, not drawings. The CAM software (LightBurn, SheetCam, Fusion 360 CAM, Mastercam) converts DXF geometry into machine instructions — G-code or proprietary formats. The quality of that conversion depends entirely on how clean the input DXF geometry is.</p>
+  <p>Poor DXF geometry causes tangible problems on the machine: the laser head pauses at micro-gaps between line segments, plasma cutters produce rough edges at corners where arcs were approximated as polylines, and waterjet machines lose cut accuracy when polyline vertices are too close together.</p>
+
+  <h2>Common DXF Problems from PDF Conversion and How to Fix Them</h2>
+
+  <h3>1. Gaps between segments (most common)</h3>
+  <p>PDF paths are defined as sequences of move-to and line-to commands. When a converter creates separate LINE entities for each segment, floating point rounding means adjacent line endpoints may be 0.001mm apart rather than exactly coincident. CAM software treats these as open contours and cannot generate a closed toolpath.</p>
+  <p>Fix in AutoCAD: use JOIN command (type JOIN, select all geometry, Enter). Set the fuzz distance to 0.01mm to close micro-gaps. In LightBurn: use Edit → Auto-Join Selected Shapes with a 0.1mm tolerance.</p>
+
+  <h3>2. Duplicate lines (common with PDF-to-DXF converters)</h3>
+  <p>Some converters generate two overlapping lines for each edge, particularly when the PDF was created from a solid model export. The visual result looks correct but CAM software cuts each line twice, doubling cut time and causing edge quality issues.</p>
+  <p>Fix in AutoCAD: OVERKILL command (type OVERKILL, select all, set tolerance to 0.01mm) removes duplicate and overlapping entities automatically.</p>
+
+  <h3>3. Open contours for shapes that should be closed</h3>
+  <p>A rectangle cut from sheet metal must be a closed contour — the laser must return to its start point. If the four sides are four separate LINE entities, CAM software may not automatically close them, particularly if there are small gaps at the corners.</p>
+  <p>Fix: use PEDIT (polyline edit) → Join to combine connected lines into a single closed LWPOLYLINE.</p>
+
+  <h3>4. Very short segments (spline approximation artifacts)</h3>
+  <p>Curved geometry in PDF is stored as cubic Bezier splines. Converters that approximate these as short line segments may produce hundreds of 0.1mm segments per arc. This significantly increases G-code file size and can cause the machine controller to slow down due to processing overhead.</p>
+  <p>pdf2dxf outputs true ARC entities for circular geometry and uses 8-point Bezier approximation for non-circular curves, keeping point counts manageable. For complex curves, the SIMPLIFY command in AutoCAD (or equivalent in your CAM software) can reduce vertex count while maintaining shape accuracy.</p>
+
+  <h2>Recommended DXF Settings for CNC Output</h2>
+  <table>
+    <thead><tr><th>Setting</th><th>Recommended value</th><th>Reason</th></tr></thead>
+    <tbody>
+      <tr><td>DXF version</td><td>R2010 (AC1024)</td><td>Wide compatibility, supports LWPOLYLINE</td></tr>
+      <tr><td>Units</td><td>Millimeters</td><td>Match machine units, avoid scale errors</td></tr>
+      <tr><td>Scale factor</td><td>Match drawing scale (1:1 for full-size)</td><td>Coordinates must equal real cut dimensions</td></tr>
+      <tr><td>Text layer</td><td>Disabled unless needed</td><td>Text entities confuse CAM toolpath generation</td></tr>
+      <tr><td>Layers</td><td>Separate cut lines from engraving</td><td>Allows different power/speed per operation</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Verification Checklist Before Sending to Machine</h2>
+  <p>Before sending a converted DXF to your CNC machine, run through this checklist in AutoCAD or your CAM software:</p>
+  <ul>
+    <li>All cut contours are closed (no open paths)</li>
+    <li>No duplicate entities (run OVERKILL)</li>
+    <li>Dimensions match expected part size (measure a known feature)</li>
+    <li>Text entities are on a separate layer that can be excluded from cutting</li>
+    <li>No entities outside the material boundary</li>
+    <li>Minimum feature size is above machine kerf width</li>
+  </ul>
 
   <!-- Internal Link CTA -->
   <div style="margin:48px 0;padding:32px;background:#0d0d14;border:1px solid #2a2a3e;border-radius:12px;text-align:center">
