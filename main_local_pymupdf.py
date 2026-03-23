@@ -487,53 +487,74 @@ def do_convert(pdf_bytes, filename, version, scale, units, opts=None):
                     for _block in page.get_text("dict").get("blocks", []):
                         if _block.get("type") != 0: continue
                         for _line in _block.get("lines", []):
+                            _spans = _line.get("spans", [])
+                            if not _spans: continue
+
+                            # Angle từ line direction
                             _dir = _line.get("dir", (1,0))
-                            _ang = math.degrees(
-                                math.atan2(_dir[1], _dir[0]))
+                            _ang = math.degrees(math.atan2(_dir[1], _dir[0]))
                             _dxf_ang = (_ang + rotation) % 360
-                            # Normalize: DXF text angle >180° đọc ngược
                             if 180 < _dxf_ang <= 360:
                                 _dxf_ang -= 180
-                            for _span in _line.get("spans", []):
-                                _txt = _span.get("text","").strip()
-                                if not _txt or len(_txt) < 1: continue
-                                _sz = _span.get("size", 8)
-                                if _sz < 2: continue
-                                _bbox = _span.get("bbox")
-                                if not _bbox: continue
-                                # Dùng origin (baseline start) nếu có, fallback bbox
-                                _ox = _span.get("origin")
-                                if _ox:
-                                    _ix, _iy = float(_ox[0]), float(_ox[1])
-                                else:
-                                    _ix, _iy = float(_bbox[0]), float(_bbox[3])
-                                # Dedup bằng bbox chính xác - loại duplicate hoàn toàn
-                                _bbox_key = tuple(round(v, 1) for v in _bbox)
-                                if _bbox_key in _written: continue
-                                _written.add(_bbox_key)
-                                _tx, _ty = to_dxf(_ix, _iy)
-                                # Normalize angle: DXF text > 180° bị đọc ngược
-                                # → trừ 180° để giữ hướng đọc tự nhiên
-                                if _dxf_ang > 180.5:
-                                    _dxf_ang = _dxf_ang - 180
-                                _fh = max(0.5, _sz * mult)
-                                # Layer theo màu text
-                                _color_int = _span.get("color", 0)
-                                _r = (_color_int >> 16) & 0xFF
-                                _g = (_color_int >> 8) & 0xFF
-                                _b = _color_int & 0xFF
-                                _txt_layer = ensure_layer(doc, "TEXT", layers, 7)
-                                if _r == 0 and _g == 0 and _b == 0:
-                                    _txt_layer = ensure_layer(doc, "TEXT_BLACK", layers, 7)
-                                elif _b > 200 and _r < 50:
-                                    _txt_layer = ensure_layer(doc, "TEXT_BLUE", layers, 5)
-                                elif _r > 200 and _g < 50:
-                                    _txt_layer = ensure_layer(doc, "TEXT_RED", layers, 1)
-                                _attribs = {"layer": _txt_layer, "height": _fh, "insert": (_tx, _ty), "style": "Arial", "width": 0.85}
-                                if _dxf_ang > 0.5:
-                                    _attribs["rotation"] = _dxf_ang
-                                msp.add_text(_txt, dxfattribs=_attribs)
-                                entities += 1
+
+                            # Gom tất cả spans trong line → 1 TEXT entity
+                            _combined_txt = ""
+                            _first_origin = None
+                            _first_size   = None
+                            _first_color  = 0
+
+                            for _span in _spans:
+                                _t = _span.get("text", "")
+                                if not _t: continue
+                                _combined_txt += _t
+                                if _first_origin is None:
+                                    _ox = _span.get("origin")
+                                    _bb = _span.get("bbox")
+                                    if _ox:
+                                        _first_origin = (float(_ox[0]), float(_ox[1]))
+                                    elif _bb:
+                                        _first_origin = (float(_bb[0]), float(_bb[3]))
+                                    _first_size  = _span.get("size", 8)
+                                    _first_color = _span.get("color", 0)
+
+                            _combined_txt = _combined_txt.strip()
+                            if not _combined_txt or _first_origin is None:
+                                continue
+                            if (_first_size or 0) < 2:
+                                continue
+
+                            # Dedup
+                            _pk = (_combined_txt[:40], round(_first_origin[0], 1), round(_first_origin[1], 1))
+                            if _pk in _written: continue
+                            _written.add(_pk)
+
+                            _tx, _ty = to_dxf(_first_origin[0], _first_origin[1])
+                            _fh = max(0.5, (_first_size or 8) * mult)
+
+                            # Layer theo màu
+                            _r = (_first_color >> 16) & 0xFF
+                            _g = (_first_color >> 8)  & 0xFF
+                            _b =  _first_color        & 0xFF
+                            _txt_layer = ensure_layer(doc, "TEXT", layers, 7)
+                            if _r == 0 and _g == 0 and _b == 0:
+                                _txt_layer = ensure_layer(doc, "TEXT_BLACK", layers, 7)
+                            elif _b > 200 and _r < 50:
+                                _txt_layer = ensure_layer(doc, "TEXT_BLUE", layers, 5)
+                            elif _r > 200 and _g < 50:
+                                _txt_layer = ensure_layer(doc, "TEXT_RED", layers, 1)
+
+                            _attribs = {
+                                "layer":  _txt_layer,
+                                "height": _fh,
+                                "insert": (_tx, _ty),
+                                "style":  "Arial",
+                                "width":  0.85,
+                            }
+                            if _dxf_ang > 0.5:
+                                _attribs["rotation"] = _dxf_ang
+
+                            msp.add_text(_combined_txt, dxfattribs=_attribs)
+                            entities += 1
                 except Exception:
                     pass
             y_offset += ph_u + PAGE_GAP
