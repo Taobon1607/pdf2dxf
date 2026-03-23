@@ -1284,8 +1284,11 @@ async def detect_scale(files: list[UploadFile] = File(...)):
         else:
             final = median
             conf = "medium"
+        # Convert: ratio = real_mm / paper_mm (e.g. 100 for 1:100)
+        # Backend needs scale = 1/ratio so mult = pt_to_mm / scale = pt_to_mm * ratio
+        scale_param = round(1.0 / final, 6) if final != 0 else 1.0
         return {
-            "scale": final,
+            "scale": scale_param,
             "detected": True,
             "confidence": conf,
             "label": f"1:{int(final)}" if final >= 1 else f"{1/final:.0f}:1"

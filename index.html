@@ -699,17 +699,17 @@
       <div class="option-group">
         <label>Scale Factor</label>
         <select id="optScale" onchange="toggleCustomScale(this.value)">
-          <option value="1">1:1 (as-is)</option>
-          <option value="10">1:10</option>
-          <option value="20">1:20</option>
-          <option value="50">1:50</option>
-          <option value="100">1:100</option>
-          <option value="200">1:200</option>
-          <option value="500">1:500</option>
-          <option value="1000">1:1000</option>
+          <option value="1">1:1 (paper size)</option>
+          <option value="0.1">1:10</option>
+          <option value="0.05">1:20</option>
+          <option value="0.02">1:50</option>
+          <option value="0.01">1:100</option>
+          <option value="0.005">1:200</option>
+          <option value="0.002">1:500</option>
+          <option value="0.001">1:1000</option>
           <option value="custom">Custom…</option>
         </select>
-        <input type="number" id="customScale" placeholder="e.g. 100" min="0.001" step="any"
+        <input type="number" id="customScale" placeholder="e.g. 0.01 for 1:100" min="0.001" step="any"
                style="display:none;margin-top:6px;width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);font-family:Syne,sans-serif;font-size:13px;">
         <div id="scaleHint" style="font-size:11px;margin-top:6px;font-family:Space Mono,monospace;color:var(--muted);"></div>
       </div>
