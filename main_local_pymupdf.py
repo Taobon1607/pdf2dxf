@@ -1326,11 +1326,49 @@ def status(job_id: str):
                 "filename":r["filename"],"entities":r["entities"],"layers":r["layers"]}
     return {"status":"error","message":"Job not found"}
 @app.get("/download/{job_id}")
-def download(job_id: str):
+async def download(job_id: str):
     if job_id not in job_results:
         raise HTTPException(404, "Job not found")
     r = job_results[job_id]
     out_path = OUTPUT_DIR / r["out_name"]
     if not out_path.exists():
         raise HTTPException(404, "File expired")
-    return FileResponse(str(out_path), media_type="application/dxf", filename=r["filename"])
+    
+    from starlette.background import BackgroundTask
+    
+    def delete_after_download():
+        """Xóa file ngay sau khi serve xong — bảo mật tài liệu người dùng"""
+        try:
+            if out_path.exists():
+                out_path.unlink()
+            # Dọn job khỏi memory
+            if job_id in job_results:
+                del job_results[job_id]
+        except Exception:
+            pass
+
+    return FileResponse(
+        str(out_path),
+        media_type="application/octet-stream",
+        filename=r["filename"],
+        background=BackgroundTask(delete_after_download)
+    )
+
+@app.on_event("startup")
+async def start_cleanup_task():
+    """Background task: xóa file DXF quá 10 phút nếu chưa được download"""
+    import asyncio
+
+    async def cleanup_loop():
+        while True:
+            await asyncio.sleep(300)  # chạy mỗi 5 phút
+            try:
+                cutoff = datetime.utcnow().timestamp() - 600  # 10 phút
+                for f in OUTPUT_DIR.glob("*.dxf"):
+                    if f.stat().st_mtime < cutoff:
+                        f.unlink()
+            except Exception:
+                pass
+
+    asyncio.create_task(cleanup_loop())
+
