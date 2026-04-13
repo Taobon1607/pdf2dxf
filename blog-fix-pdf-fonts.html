@@ -138,68 +138,43 @@ if (window.location.hostname.includes('github.io')) {
     <div class="cta-box">
       <h3>Ready to convert your drawings correctly?</h3>
       <p>Experience the highest quality PDF to DXF conversion with layer and font preservation.</p>
-      <a href="index.html" class="btn">Start Converting Now</a>
+      <a href="/" class="btn">Start Converting Now</a>
+    </div>
+
+    <!-- Additional SEO content -->
+    <section style="padding:48px 0 0">
+      <h2 style="font-size:22px;margin-bottom:16px;color:var(--accent)">Why PDF Font Encoding Breaks in AutoCAD</h2>
+      <p style="font-size:16px;color:#d0d0e0;margin-bottom:16px;">AutoCAD SHX fonts (simplex.shx, romans.shx) were designed before Unicode existed, so their glyph-to-character mapping is non-standard. When a PDF reader or converter tries to extract text from these glyphs, it produces question marks or random characters because the reverse-mapping table is missing from the PDF file. Standard TrueType fonts like Arial, Times New Roman, and Calibri embed proper Unicode mapping tables and convert correctly in nearly all cases.</p>
+
+      <h2 style="font-size:22px;margin:32px 0 16px;color:var(--accent)">How to Identify Which Fonts Are Causing Problems</h2>
+      <p style="font-size:16px;color:#d0d0e0;margin-bottom:16px;">In Adobe Acrobat, open File &rarr; Properties &rarr; Fonts tab. Any font listed as "Type 3" without a recognizable Unicode name is a candidate for text extraction failure. A simpler test: select all text with Ctrl+A &rarr; Ctrl+C, then paste into Notepad. If the result shows garbage characters, text extraction will fail in any converter.</p>
+
+      <h2 style="font-size:22px;margin:32px 0 16px;color:var(--accent)">Fix Methods</h2>
+      <p style="font-size:16px;color:#d0d0e0;margin-bottom:8px;"><strong>Method 1 &mdash; Re-export from the Source DWG:</strong> If you have the original DWG, change all SHX text styles to Arial or another TTF font, then re-plot to PDF.</p>
+      <p style="font-size:16px;color:#d0d0e0;margin-bottom:8px;"><strong>Method 2 &mdash; AutoCAD Font Substitution:</strong> When opening a DXF with font issues, AutoCAD may prompt you to substitute missing fonts. Map to Arial or Romans.</p>
+      <p style="font-size:16px;color:#d0d0e0;margin-bottom:8px;"><strong>Method 3 &mdash; Manual Re-annotation:</strong> Use the converted DXF as a geometry base and re-enter text manually. This takes 15&ndash;30 minutes for a typical floor plan.</p>
+    </section>
+
+    <div style="margin:48px 0;padding:32px;background:#0d0d14;border:1px solid #2a2a3e;border-radius:12px;text-align:center">
+      <p style="font-size:18px;font-weight:700;color:#f0f0f8;margin-bottom:8px">Ready to convert your PDF to DXF?</p>
+      <p style="color:#9090b0;margin-bottom:20px">No signup required. 5 free conversions/day. Layers and text preserved.</p>
+      <a href="https://pdf2dxf.us/" style="display:inline-block;padding:14px 32px;background:#00e5ff;color:#000;font-weight:700;border-radius:8px;text-decoration:none;font-size:15px">Try pdf2dxf Free &rarr;</a>
+    </div>
+    <div style="margin:32px 0 64px">
+      <h3 style="font-size:16px;color:#9090b0;margin-bottom:16px">Related Articles</h3>
+      <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:10px">
+        <li><a href="https://pdf2dxf.us/blog-scanned-pdf-to-autocad.html" style="color:#00e5ff;text-decoration:none">&rarr; Scanned PDF to AutoCAD: Raster to DXF Guide</a></li>
+        <li><a href="https://pdf2dxf.us/blog-dxf-vs-dwg.html" style="color:#00e5ff;text-decoration:none">&rarr; DXF vs DWG: Which Format is Better?</a></li>
+        <li><a href="https://pdf2dxf.us/blog-pdf-to-solidworks-dxf.html" style="color:#00e5ff;text-decoration:none">&rarr; PDF to SolidWorks DXF</a></li>
+        <li><a href="https://pdf2dxf.us/blog-dxf-for-laser-cutting.html" style="color:#00e5ff;text-decoration:none">&rarr; Optimizing DXF Files for Laser &amp; Plasma Cutting</a></li>
+        <li><a href="https://pdf2dxf.us/guides.html" style="color:#00e5ff;text-decoration:none">&rarr; All Engineering Guides &amp; Tutorials</a></li>
+      </ul>
     </div>
   </article>
 
   <footer>
-    © 2026 pdf2dxf.us — Built for engineers
+    &copy; 2026 pdf2dxf.us &mdash; Built for engineers
   </footer>
 </div>
-
-  <h2>Why PDF Font Encoding Breaks in AutoCAD</h2>
-  <p>When AutoCAD plots a drawing to PDF, text entities go through a two-stage encoding process. First, AutoCAD maps its internal font (SHX, TTF, or BigFont) to a PDF font resource. Second, the PDF renderer encodes each character using the font's internal glyph mapping — which may or may not correspond to standard Unicode code points.</p>
-  <p>The problem occurs specifically with AutoCAD SHX fonts (simplex.shx, romans.shx, etc.) and custom company fonts. These fonts were designed in the 1980s before Unicode existed, and their glyph-to-character mapping is non-standard. When a PDF reader or converter tries to extract text from these glyphs, it either produces question marks, empty strings, or random Unicode characters because the reverse-mapping table is missing from the PDF file.</p>
-  <p>Standard TrueType fonts like Arial, Times New Roman, and Calibri embed proper Unicode mapping tables and convert correctly in nearly all cases.</p>
-
-  <h2>How to Identify Which Fonts Are Causing Problems</h2>
-  <p>In Adobe Acrobat or the free Adobe Reader, open the PDF → File → Properties → Fonts tab. Any font listed as "Type 3" or showing "(Embedded Subset)" without a proper Unicode name is a candidate for text extraction failure. SHX-derived fonts often appear as generic names like "GDT", "Monotxt", or a filename without a recognizable typeface name.</p>
-  <p>A simpler test: open the PDF, try to select and copy text with Ctrl+A → Ctrl+C, then paste into Notepad. If the pasted result shows garbage characters or nothing at all, text extraction will fail in any converter — not just pdf2dxf.</p>
-
-  <h2>Fix Method 1 — Re-export from the Source DWG</h2>
-  <p>If you have access to the original DWG file, this is the most reliable fix. Open the DWG in AutoCAD → change all SHX text styles to Arial or another standard TTF font → re-plot to PDF. The resulting PDF will have extractable Unicode text.</p>
-  <p>To change text styles in AutoCAD: type STYLE → select each text style → change the Font Name from an SHX file to "Arial" (or another TTF) → Apply. Then use PLOT or PUBLISH to create a new PDF.</p>
-
-  <h2>Fix Method 2 — Use AutoCAD's "Convert to Text" When Importing DXF</h2>
-  <p>When you open a DXF recovered from a PDF with font issues, AutoCAD may prompt you to substitute missing fonts. At this dialog, map the missing font to Arial or Romans. The geometry of the text entity (position, height, rotation) is preserved even when the font mapping fails — only the rendered characters are wrong.</p>
-
-  <h2>Fix Method 3 — Manual Re-annotation</h2>
-  <p>For drawings where only specific text elements matter (dimension values, grid labels), the fastest approach is often to treat the converted DXF as a geometry base and add new text manually. The structural lines, walls, and grid are correctly converted; only the annotation layer needs to be re-entered. This takes 15–30 minutes for a typical floor plan and produces cleaner results than attempting automated font repair.</p>
-
-  <h2>What pdf2dxf Does With Unrecognizable Text</h2>
-  <p>When pdf2dxf encounters a text span where PyMuPDF cannot map glyphs to Unicode (common with embedded SHX fonts), it skips that span rather than outputting garbage characters. This means some text entities will be missing from the output rather than present but unreadable — a deliberate choice to keep the DXF clean for the geometry that does convert correctly.</p>
-  <p>Text that uses standard fonts (Arial, Calibri, Times New Roman, and most system TTF fonts) converts reliably with correct character content, font height, position, and rotation angle.</p>
-
-  <h2>Font Support Reference</h2>
-  <table>
-    <thead><tr><th>Font type</th><th>PDF text extraction</th><th>Notes</th></tr></thead>
-    <tbody>
-      <tr><td>TrueType (Arial, Calibri, etc.)</td><td>✓ Reliable</td><td>Full Unicode mapping</td></tr>
-      <tr><td>AutoCAD SHX (simplex, romans)</td><td>✗ Often fails</td><td>No Unicode mapping in PDF</td></tr>
-      <tr><td>Symbol / Wingdings</td><td>✗ Fails</td><td>Non-Unicode glyph set</td></tr>
-      <tr><td>Custom company fonts</td><td>Varies</td><td>Depends on embedding</td></tr>
-      <tr><td>OpenType (OTF)</td><td>✓ Usually works</td><td>Most have Unicode tables</td></tr>
-    </tbody>
-  </table>
-
-  <!-- Internal Link CTA -->
-  <div style="margin:48px 0;padding:32px;background:#0d0d14;border:1px solid #2a2a3e;border-radius:12px;text-align:center">
-    <p style="font-size:18px;font-weight:700;color:#f0f0f8;margin-bottom:8px">Ready to convert your PDF to DXF?</p>
-    <p style="color:#9090b0;margin-bottom:20px">No signup required. 5 free conversions/day. Layers and text preserved.</p>
-    <a href="https://pdf2dxf.us/" style="display:inline-block;padding:14px 32px;background:#00e5ff;color:#000;font-weight:700;border-radius:8px;text-decoration:none;font-size:15px">Try pdf2dxf Free →</a>
-  </div>
-  <!-- Related Articles -->
-  <div style="margin:32px 0">
-    <h3 style="font-size:16px;color:#9090b0;margin-bottom:16px">Related Articles</h3>
-    <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:10px">
-      <li><a href="https://pdf2dxf.us/blog-fix-pdf-fonts.html" style="color:#00e5ff;text-decoration:none">→ How to Fix PDF Font Issues in AutoCAD</a></li>
-      <li><a href="https://pdf2dxf.us/blog-scanned-pdf-to-autocad.html" style="color:#00e5ff;text-decoration:none">→ Scanned PDF to AutoCAD: Raster to DXF Guide</a></li>
-      <li><a href="https://pdf2dxf.us/blog-dxf-vs-dwg.html" style="color:#00e5ff;text-decoration:none">→ DXF vs DWG: Which Format is Better for PDF Conversion?</a></li>
-      <li><a href="https://pdf2dxf.us/blog-pdf-to-solidworks-dxf.html" style="color:#00e5ff;text-decoration:none">→ PDF to SolidWorks DXF: Import Drawings Without Errors</a></li>
-      <li><a href="https://pdf2dxf.us/blog-dxf-for-laser-cutting.html" style="color:#00e5ff;text-decoration:none">→ Optimizing DXF Files for Laser & Plasma Cutting</a></li>
-      <li><a href="https://pdf2dxf.us/guides.html" style="color:#00e5ff;text-decoration:none">→ All Engineering Guides & Tutorials</a></li>
-    </ul>
-  </div>
-
 </body>
 </html>

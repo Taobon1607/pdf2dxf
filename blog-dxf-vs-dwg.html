@@ -95,10 +95,10 @@ if (window.location.hostname.includes('github.io')) {
 <body>
 <div class="container">
   <header>
-    <a href="index.html" class="logo">pdf<span>2</span>dxf<span>.us</span></a>
+    <a href="/" class="logo">pdf<span>2</span>dxf<span>.us</span></a>
     <nav>
       <a href="guides.html">Back to Guides</a>
-      <a href="index.html">Home</a>
+      <a href="/">Home</a>
     </nav>
   </header>
 
@@ -126,75 +126,44 @@ if (window.location.hostname.includes('github.io')) {
     <div class="cta-box">
       <h3>Need a smooth CAD workflow?</h3>
       <p>Get the highest quality engineering output at pdf2dxf.us—the universal standard for PDF conversion.</p>
-      <a href="index.html" class="btn">Start Your Conversion</a>
+      <a href="/" class="btn">Start Your Conversion</a>
     </div>
   </article>
 
-  <footer>
-    © 2026 pdf2dxf.us — Built for engineers
-  </footer>
-</div>
+  <!-- Additional SEO content inside container -->
+  <section style="padding:48px 0 0">
+    <h2 style="font-size:22px;margin-bottom:16px;color:var(--accent)">Understanding the Core Difference</h2>
+    <p style="font-size:16px;color:#d0d0e0;margin-bottom:16px;">DWG is Autodesk's proprietary binary format. DXF (Drawing Exchange Format) was designed by Autodesk specifically for interoperability — encoding geometric data in a human-readable format that any CAD platform can parse. For PDF conversion, the choice comes down to: what software you're using, whether you need full AutoCAD object support, and how the file will be used downstream.</p>
 
-  <h2>Understanding the Core Difference</h2>
-  <p>DWG (Drawing) is Autodesk's proprietary binary format, introduced with AutoCAD version 1.0 in 1982. It stores the full AutoCAD object model including blocks, xrefs, layouts, named views, and custom objects. DXF (Drawing Exchange Format) was designed by Autodesk specifically for interoperability — it encodes the same geometric data in a human-readable ASCII or compact binary format that any CAD platform can parse.</p>
-  <p>When you export a PDF from AutoCAD and need to recover that drawing, the question of DXF vs DWG comes down to three factors: what software you're using, whether you need full AutoCAD object support, and how the recovered file will be used downstream.</p>
+    <h2 style="font-size:22px;margin:32px 0 16px;color:var(--accent)">When DXF Is the Better Choice</h2>
+    <p style="font-size:16px;color:#d0d0e0;margin-bottom:16px;">DXF is the universal import format accepted by every major CAD platform — AutoCAD, BricsCAD, ZWCAD, LibreCAD, FreeCAD, SolidWorks, Fusion 360, and virtually every CNC toolpath software — without additional plugins. DXF is also version-explicit, making compatibility predictable. For batch processing and automated CNC workflows, ASCII DXF is significantly easier to parse programmatically.</p>
 
-  <h2>When DXF Is the Better Choice</h2>
-  <p>For PDF conversion specifically, DXF has a clear advantage: it is the universal import format accepted by every major CAD platform without additional plugins. AutoCAD, BricsCAD, ZWCAD, LibreCAD, FreeCAD, SolidWorks, Fusion 360, and virtually every CNC toolpath software reads DXF natively. DWG requires either Autodesk's own software or a compatibility library, which some platforms charge extra for.</p>
-  <p>DXF is also version-explicit. When you output DXF R2010 (AC1024), the receiving application knows exactly what entity types and properties to expect. DWG versioning is less transparent and older DWG files can cause silent data loss when opened in mismatched software versions.</p>
-  <p>For batch processing and automated workflows — connecting a PDF-to-DXF converter to a CNC post-processor, for example — DXF is significantly easier to parse programmatically. The ASCII variant of DXF is a plain text file with a predictable group-code structure that any developer can read without a proprietary SDK.</p>
+    <h2 style="font-size:22px;margin:32px 0 16px;color:var(--accent)">When DWG Makes More Sense</h2>
+    <p style="font-size:16px;color:#d0d0e0;margin-bottom:16px;">If your recovered drawing needs to go back into a full AutoCAD workflow with blocks, dynamic blocks, paper space layouts, or xrefs, DWG may be preferable. DWG also compresses better than ASCII DXF for large drawings.</p>
 
-  <h2>When DWG Makes More Sense</h2>
-  <p>If your recovered drawing needs to go back into a full AutoCAD workflow that uses blocks, dynamic blocks, paper space layouts, or xrefs, DWG preserves those structures better. A PDF flattens all of this into simple geometry, so you cannot recover blocks from a PDF regardless of format — but the downstream file you're editing into will behave more naturally in DWG.</p>
-  <p>DWG also compresses better than ASCII DXF for large drawings with many entities, which matters when emailing files or storing large archives.</p>
+    <h2 style="font-size:22px;margin:32px 0 16px;color:var(--accent)">Which Format Does pdf2dxf Output?</h2>
+    <p style="font-size:16px;color:#d0d0e0;margin-bottom:16px;">pdf2dxf outputs DXF R12 through R2018. R2010 is the recommended default for the best balance of feature support and compatibility. If your workflow requires DWG, simply open the converted DXF in AutoCAD or BricsCAD and Save As DWG.</p>
+  </section>
 
-  <h2>File Size Comparison</h2>
-  <table>
-    <thead><tr><th>Format</th><th>Drawing complexity</th><th>Typical size</th><th>Compressible</th></tr></thead>
-    <tbody>
-      <tr><td>DXF ASCII</td><td>A1 floor plan</td><td>2–8 MB</td><td>Yes (70% with zip)</td></tr>
-      <tr><td>DXF Binary</td><td>A1 floor plan</td><td>0.8–3 MB</td><td>Yes (50% with zip)</td></tr>
-      <tr><td>DWG</td><td>A1 floor plan</td><td>0.3–1.5 MB</td><td>Minimal (already compressed)</td></tr>
-    </tbody>
-  </table>
-
-  <h2>Compatibility Matrix</h2>
-  <table>
-    <thead><tr><th>Software</th><th>DXF</th><th>DWG</th></tr></thead>
-    <tbody>
-      <tr><td>AutoCAD LT / Full</td><td>✓ Native</td><td>✓ Native</td></tr>
-      <tr><td>BricsCAD</td><td>✓ Native</td><td>✓ Native</td></tr>
-      <tr><td>ZWCAD</td><td>✓ Native</td><td>✓ Native</td></tr>
-      <tr><td>LibreCAD</td><td>✓ Native</td><td>✗ Not supported</td></tr>
-      <tr><td>FreeCAD</td><td>✓ Native</td><td>Limited (plugin)</td></tr>
-      <tr><td>SolidWorks</td><td>✓ Native</td><td>Limited (DWG import)</td></tr>
-      <tr><td>Fusion 360</td><td>✓ Native</td><td>✓ Supported</td></tr>
-      <tr><td>CNC (Mastercam, etc.)</td><td>✓ Standard</td><td>Varies by version</td></tr>
-    </tbody>
-  </table>
-
-  <h2>Which Format Does pdf2dxf Output?</h2>
-  <p>pdf2dxf outputs DXF R12 through R2018. DXF was chosen because it maximizes compatibility across all CAD platforms without requiring the user to have a specific Autodesk license. The output format version can be selected at conversion time — R2010 is the recommended default for the best balance of feature support and compatibility with software from 2010 onwards.</p>
-  <p>If your workflow specifically requires DWG, the recommended approach is to open the converted DXF in AutoCAD or BricsCAD and use Save As to export DWG. This two-step process takes under a minute and produces a native DWG with proper object structure.</p>
-
-  <!-- Internal Link CTA -->
   <div style="margin:48px 0;padding:32px;background:#0d0d14;border:1px solid #2a2a3e;border-radius:12px;text-align:center">
     <p style="font-size:18px;font-weight:700;color:#f0f0f8;margin-bottom:8px">Ready to convert your PDF to DXF?</p>
     <p style="color:#9090b0;margin-bottom:20px">No signup required. 5 free conversions/day. Layers and text preserved.</p>
     <a href="https://pdf2dxf.us/" style="display:inline-block;padding:14px 32px;background:#00e5ff;color:#000;font-weight:700;border-radius:8px;text-decoration:none;font-size:15px">Try pdf2dxf Free →</a>
   </div>
-  <!-- Related Articles -->
-  <div style="margin:32px 0">
+  <div style="margin:32px 0 64px">
     <h3 style="font-size:16px;color:#9090b0;margin-bottom:16px">Related Articles</h3>
     <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:10px">
       <li><a href="https://pdf2dxf.us/blog-fix-pdf-fonts.html" style="color:#00e5ff;text-decoration:none">→ How to Fix PDF Font Issues in AutoCAD</a></li>
       <li><a href="https://pdf2dxf.us/blog-scanned-pdf-to-autocad.html" style="color:#00e5ff;text-decoration:none">→ Scanned PDF to AutoCAD: Raster to DXF Guide</a></li>
-      <li><a href="https://pdf2dxf.us/blog-dxf-vs-dwg.html" style="color:#00e5ff;text-decoration:none">→ DXF vs DWG: Which Format is Better for PDF Conversion?</a></li>
       <li><a href="https://pdf2dxf.us/blog-pdf-to-solidworks-dxf.html" style="color:#00e5ff;text-decoration:none">→ PDF to SolidWorks DXF: Import Drawings Without Errors</a></li>
-      <li><a href="https://pdf2dxf.us/blog-dxf-for-laser-cutting.html" style="color:#00e5ff;text-decoration:none">→ Optimizing DXF Files for Laser & Plasma Cutting</a></li>
-      <li><a href="https://pdf2dxf.us/guides.html" style="color:#00e5ff;text-decoration:none">→ All Engineering Guides & Tutorials</a></li>
+      <li><a href="https://pdf2dxf.us/blog-dxf-for-laser-cutting.html" style="color:#00e5ff;text-decoration:none">→ Optimizing DXF Files for Laser &amp; Plasma Cutting</a></li>
+      <li><a href="https://pdf2dxf.us/guides.html" style="color:#00e5ff;text-decoration:none">→ All Engineering Guides &amp; Tutorials</a></li>
     </ul>
   </div>
 
+  <footer>
+    © 2026 pdf2dxf.us — Built for engineers
+  </footer>
+</div>
 </body>
 </html>

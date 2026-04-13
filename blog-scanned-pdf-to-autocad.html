@@ -143,22 +143,49 @@ if (window.location.hostname.includes('github.io')) {
     <div class="cta-box">
       <h3>Stop re-drawing from scratch</h3>
       <p>Upload your scanned drawings now and get an editable DXF in seconds.</p>
-      <a href="index.html" class="btn">Convert Scanned PDF</a>
+      <a href="/" class="btn">Convert Scanned PDF</a>
+    </div>
+
+    <!-- Additional SEO content inside container -->
+    <section style="padding:48px 0 0">
+      <h2 style="font-size:22px;margin-bottom:16px;color:var(--accent)">Understanding the Two Types of PDF Drawings</h2>
+      <p style="font-size:16px;color:#d0d0e0;margin-bottom:16px;">A <strong>vector PDF</strong> is created when AutoCAD or another CAD application plots directly to PDF. A PDF-to-DXF converter can extract these paths with high accuracy. A <strong>raster PDF</strong> (scanned PDF) contains only a bitmap image &mdash; essentially a photograph of paper &mdash; and requires Raster-to-Vector (R2V) conversion using image processing algorithms.</p>
+
+      <h2 style="font-size:22px;margin:32px 0 16px;color:var(--accent)">How to Tell if Your PDF is Vector or Scanned</h2>
+      <p style="font-size:16px;color:#d0d0e0;margin-bottom:16px;">Open the PDF in Adobe Acrobat Reader. Try to select a line by clicking on it. If you can select individual lines, it is a vector PDF. If clicking selects a rectangular region of pixels, it is a scanned (raster) PDF. Another method: zoom to 400% or more. Vector lines remain crisp at any zoom level; scanned lines become pixelated.</p>
+
+      <h2 style="font-size:22px;margin:32px 0 16px;color:var(--accent)">Scan Quality Requirements</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;margin:20px 0;">
+        <thead><tr style="border-bottom:1px solid var(--border)"><th style="text-align:left;padding:10px 12px;color:var(--muted)">Drawing type</th><th style="text-align:left;padding:10px 12px;color:var(--muted)">Min DPI</th><th style="text-align:left;padding:10px 12px;color:var(--muted)">Recommended DPI</th></tr></thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 12px">Large format (A0, A1)</td><td style="padding:10px 12px">200</td><td style="padding:10px 12px">400</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 12px">A2 / A3 drawings</td><td style="padding:10px 12px">300</td><td style="padding:10px 12px">600</td></tr>
+          <tr><td style="padding:10px 12px">Drawings with small text</td><td style="padding:10px 12px">400</td><td style="padding:10px 12px">800</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <div style="margin:48px 0;padding:32px;background:#0d0d14;border:1px solid #2a2a3e;border-radius:12px;text-align:center">
+      <p style="font-size:18px;font-weight:700;color:#f0f0f8;margin-bottom:8px">Ready to convert your PDF to DXF?</p>
+      <p style="color:#9090b0;margin-bottom:20px">No signup required. 5 free conversions/day. Layers and text preserved.</p>
+      <a href="https://pdf2dxf.us/" style="display:inline-block;padding:14px 32px;background:#00e5ff;color:#000;font-weight:700;border-radius:8px;text-decoration:none;font-size:15px">Try pdf2dxf Free &rarr;</a>
+    </div>
+    <div style="margin:32px 0 64px">
+      <h3 style="font-size:16px;color:#9090b0;margin-bottom:16px">Related Articles</h3>
+      <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:10px">
+        <li><a href="https://pdf2dxf.us/blog-fix-pdf-fonts.html" style="color:#00e5ff;text-decoration:none">&rarr; How to Fix PDF Font Issues in AutoCAD</a></li>
+        <li><a href="https://pdf2dxf.us/blog-dxf-vs-dwg.html" style="color:#00e5ff;text-decoration:none">&rarr; DXF vs DWG: Which Format is Better?</a></li>
+        <li><a href="https://pdf2dxf.us/blog-pdf-to-solidworks-dxf.html" style="color:#00e5ff;text-decoration:none">&rarr; PDF to SolidWorks DXF</a></li>
+        <li><a href="https://pdf2dxf.us/blog-dxf-for-laser-cutting.html" style="color:#00e5ff;text-decoration:none">&rarr; Optimizing DXF Files for Laser &amp; Plasma Cutting</a></li>
+        <li><a href="https://pdf2dxf.us/guides.html" style="color:#00e5ff;text-decoration:none">&rarr; All Engineering Guides &amp; Tutorials</a></li>
+      </ul>
     </div>
   </article>
 
   <footer>
-    © 2026 pdf2dxf.us — Built for engineers
+    &copy; 2026 pdf2dxf.us &mdash; Built for engineers
   </footer>
 </div>
-
-  <h2>Understanding the Two Types of PDF Drawings</h2>
-  <p>Before choosing a conversion approach, it is important to distinguish between two fundamentally different types of PDF engineering drawings.</p>
-  <p>A <strong>vector PDF</strong> is created when AutoCAD, Revit, or another CAD application plots directly to PDF. The drawing geometry is stored as mathematical paths — lines, arcs, and curves with precise coordinates. A PDF-to-DXF converter can extract these paths and reconstruct the original geometry with high accuracy.</p>
-  <p>A <strong>raster PDF</strong> (scanned PDF) contains only a bitmap image of the drawing — essentially a photograph of paper. There is no geometric data to extract. Converting a scanned PDF to DXF requires Raster-to-Vector (R2V) conversion, which uses image processing algorithms to detect lines and edges in the pixel data and reconstruct approximate vector geometry.</p>
-  <p>The conversion quality difference is significant: vector PDF conversion preserves original precision (sub-millimeter accuracy), while scanned PDF conversion is approximate and depends heavily on scan quality, resolution, and drawing complexity.</p>
-
-  <h2>How to Tell if Your PDF is Vector or Scanned</h2>
   <p>Open the PDF in Adobe Acrobat Reader. Try to select a line by clicking on it. If you can select individual lines or text strings, it is a vector PDF. If clicking selects a rectangular region of pixels, it is a scanned (raster) PDF.</p>
   <p>Another method: zoom in to 400% or more. Vector lines remain crisp at any zoom level. Scanned lines become pixelated.</p>
 

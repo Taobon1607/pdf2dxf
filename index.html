@@ -7,9 +7,14 @@
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-6D2KCTWQYL');
+  if (!window.electronAPI) {
+    gtag('js', new Date());
+    gtag('config', 'G-6D2KCTWQYL');
+  }
+  // Redirect /index.html to / for canonical consistency
+  if (window.location.pathname.endsWith('/index.html')) {
+    window.location.replace(window.location.href.replace('/index.html', '/'));
+  }
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PDF to DXF Converter Online Free — Preserves Layers & Text | pdf2dxf</title>
@@ -655,6 +660,22 @@
     animation: fadeIn 0.4s ease;
   }
   @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+  /* Electron UI Refinements */
+  body.is-electron #privacyLink,
+  body.is-electron #termsLink,
+  body.is-electron #guidesLink,
+  body.is-electron nav,
+  body.is-electron #pricing,
+  body.is-electron #compare,
+  body.is-electron #adSlot,
+  body.is-electron #usageWrap,
+  body.is-electron #proKeyWrap,
+  body.is-electron #privacyBar,
+  body.is-electron footer a:not(#contactLink) {
+    display: none !important;
+  }
+  body.is-electron footer { border-top: none; }
+  body.is-electron .hero { padding-top: 48px; }
 </style>
 <script src="https://www.paypal.com/sdk/js?client-id=ATBXxcvfGNXhas34_cL5JiP2jxmIQV-YTFneuaXUDMwuNi_AZ9LFuCyXDlKFqsLwYf_6wjiT43tmNlQB&currency=USD"></script>
 </head>
@@ -664,7 +685,7 @@
 <!-- Header -->
 <div class="container">
   <header>
-    <div class="logo">pdf<span>2</span>dxf<span>.us</span></div>
+    <div class="logo" id="mainLogo">pdf<span>2</span>dxf<span>.us</span></div>
     <nav>
       <a href="#features">Features</a>
       <a href="#pricing">Pricing</a>
@@ -697,20 +718,20 @@
 <!-- Hero -->
 <div class="container">
   <section class="hero">
-    <div class="badge">CAD-Quality Conversion Engine</div>
-    <h1>
+    <div class="badge" id="heroBadge">Offline Professional Edition</div>
+    <h1 id="heroTitle">
       <span class="line-dim">PDF & Image to DXF</span><br>
-      <span class="line-accent">that actually works</span>
+      <span class="line-accent">100% Private & Offline</span>
     </h1>
-    <p class="hero-sub">
-      Preserves vector lines, layers, text entities and lineweights.<br>
-      Built by engineers, for engineers.
+    <p class="hero-sub" id="heroSub">
+      Convert with zero data tracking. No files ever leave your PC.<br>
+      High-precision vector engine.
     </p>
     <div class="stats">
-      <div class="stat"><span class="stat-num">R2018</span><span class="stat-label">DXF Version</span></div>
-      <div class="stat"><span class="stat-num">100MB</span><span class="stat-label">Max File Size</span></div>
-      <div class="stat"><span class="stat-num">100%</span><span class="stat-label">Browser-based</span></div>
-      <div class="stat"><span class="stat-num">0</span><span class="stat-label">Signups needed</span></div>
+      <div class="stat"><span class="stat-num">R12–R2018</span><span class="stat-label">Full Support</span></div>
+      <div class="stat"><span class="stat-num">∞</span><span class="stat-label">No Limits</span></div>
+      <div class="stat"><span class="stat-num">100%</span><span class="stat-label">Privacy Shield</span></div>
+      <div class="stat"><span class="stat-num">Pro</span><span class="stat-label">Software Active</span></div>
     </div>
   </section>
   <!-- Upload Card -->
@@ -728,8 +749,8 @@
       </div>
       <div class="drop-title">Drop files here</div>
       <div class="drop-sub">
-        or <strong>click to browse</strong> — supports PDFs &amp; Images (JPG, PNG, WEBP)<br>
-        <span style="font-family:'Space Mono',monospace;font-size:11px;opacity:0.6">Free: 5 files/day · 10MB max &nbsp;|&nbsp; Pro: unlimited · 100MB</span>
+        or <strong>click to browse</strong> — supports PDFs & Images (JPG, PNG, WEBP)<br>
+        <span style="font-family:'Space Mono',monospace;font-size:11px;opacity:0.6">Local processing | Unlimited files | No internet needed</span>
       </div>
       <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.webp" multiple>
     </div>
@@ -1196,24 +1217,37 @@
   </div>
   <footer>
     <div style="margin-bottom:16px">
-      <a href="#">Privacy</a>
-      <a href="#">Terms</a>
-      <a href="guides.html">Guides</a>
-      <a href="#" onclick="openContactModal(); return false;">Contact</a>
+      <a href="#" id="privacyLink">Privacy</a>
+      <a href="#" id="termsLink">Terms</a>
+      <a href="guides.html" id="guidesLink">Guides</a>
+      <a href="#" id="contactLink" onclick="openContactModal(); return false;">Support & Contact</a>
     </div>
-    © 2026 pdf2dxf.us — Built for engineers
+    © 2026 pdf2dxf Offline PRO — CAD Professional Edition
   </footer>
 </div><!-- /container -->
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ─── State ───────────────────────────────────────────────
 const RAILWAY_URL = 'https://web-production-f7ee7.up.railway.app';
-const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'http://localhost:8000'
-  : RAILWAY_URL;
+let API_BASE = RAILWAY_URL;
+if (window.electronAPI) {
+  API_BASE = 'http://127.0.0.1:' + window.electronAPI.getApiPort();
+} else if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  API_BASE = 'http://localhost:8000';
+}
 let files = [];
 let usageRemaining = 5;
-let isPro = false;
 let proKey = '';
+
+// Force-set Electron environment immediately to prevent UI flicker
+if (window.electronAPI) {
+  document.addEventListener('DOMContentLoaded', () => {
+    document.body.classList.add('is-electron');
+    const logo = document.getElementById('mainLogo');
+    if (logo) logo.innerHTML = 'pdf<span>2</span>dxf<span> Offline PRO</span>';
+    updateUsageUI(); // Cập nhật giao diện Pro ngay lập tức
+  });
+}
+
 // Load usage on page start
 async function loadUsage() {
   try {
@@ -1226,7 +1260,10 @@ async function loadUsage() {
   } catch(e) {}
 }
 function updateUsageUI(data) {
-  if (data) {
+  if (window.electronAPI) {
+    isPro = true;
+    usageRemaining = 99999;
+  } else if (data) {
     isPro = data.is_pro || false;
     usageRemaining = data.remaining ?? 5;
   }

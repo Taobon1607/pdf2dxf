@@ -79,32 +79,28 @@
 </style>
 
 <script>
-// Nếu đang chạy trên github.io → add noindex để tránh duplicate content
 if (window.location.hostname.includes('github.io')) {
   var meta = document.createElement('meta');
   meta.name = 'robots';
   meta.content = 'noindex, nofollow';
   document.head.appendChild(meta);
-  // Redirect về domain chính
-  window.location.replace(window.location.href.replace(
-    /taobon1607\.github\.io\/pdf2dxf/, 'pdf2dxf.us'
-  ));
+  window.location.replace(window.location.href.replace(/taobon1607\.github\.io\/pdf2dxf/, 'pdf2dxf.us'));
 }
 </script>
 </head>
 <body>
 <div class="container">
   <header>
-    <a href="index.html" class="logo">pdf<span>2</span>dxf<span>.us</span></a>
+    <a href="/" class="logo">pdf<span>2</span>dxf<span>.us</span></a>
     <nav>
       <a href="guides.html">Back to Guides</a>
-      <a href="index.html">Home</a>
+      <a href="/">Home</a>
     </nav>
   </header>
 
   <article>
-    <span class="badge">CNC & Fabrication</span>
-    <h1>Optimizing DXF Files for Laser, Plasma & Waterjet Cutting</h1>
+    <span class="badge">CNC &amp; Fabrication</span>
+    <h1>Optimizing DXF Files for Laser, Plasma &amp; Waterjet Cutting</h1>
     <div class="meta">Updated: March 20, 2026 • By pdf2dxf Engineering Team</div>
 
     <div class="content">
@@ -112,25 +108,69 @@ if (window.location.hostname.includes('github.io')) {
       <p>In this guide, we'll cover the essential steps to ensure your DXF files are production-ready for any laser, plasma, or waterjet cutting system.</p>
 
       <h2>1. Join Your Paths (Gap Healing)</h2>
-      <p>CNC machines need continuous paths to follow. If your drawing has thousands of tiny, disconnected lines, the laser head will constantly stop and start (this is called "stuttering").</p>
-      <p>Using <code>pdf2dxf.us</code>, our engine automatically attempts to "heal" small gaps between segments, joining them into continuous **Polylines**. This ensures a smooth, fast cut and a better finish on the material.</p>
+      <p>CNC machines need continuous paths to follow. If your drawing has thousands of tiny, disconnected lines, the laser head will constantly stop and start (this is called "stuttering"). Using <code>pdf2dxf.us</code>, our engine automatically attempts to "heal" small gaps between segments, joining them into continuous Polylines.</p>
 
       <h2>2. Avoid "Double Lines"</h2>
-      <p>A common issue with automatic vectorization is "double-tracing." This happens when a converter traces both the inside and outside of a thick line, causing the laser to pass over the same spot twice.</p>
-      <p>Our **Raster-to-Vector (R2V)** engine uses thinning algorithms to find the <i>centerline</i> of your strokes, producing a single, clean path for the cutting head.</p>
+      <p>A common issue with automatic vectorization is "double-tracing." Our Raster-to-Vector (R2V) engine uses thinning algorithms to find the <i>centerline</i> of your strokes, producing a single, clean path for the cutting head.</p>
 
       <h2>3. The Importance of Arc Detection</h2>
-      <p>Many converters turn a circle into hundreds of tiny straight segments. Not only does this make the file huge, but it also causes the machine to vibrate.</p>
-      <p>We use **Bulge Detection** to convert these segments back into true mathematical Arcs and Circles. Result? Smaller files and perfectly smooth circular cuts.</p>
+      <p>Many converters turn a circle into hundreds of tiny straight segments. We use Bulge Detection to convert these segments back into true mathematical Arcs and Circles — smaller files and perfectly smooth circular cuts.</p>
 
       <h2>4. Cleaning Up Overlapping Geometry</h2>
       <p>Ensure that there are no overlapping lines in your file. Most CAM software (like Mach3, LightBurn, or SheetCam) will interpret overlapping lines as multiple cut passes, which can burn or ruin thin metals and wood.</p>
+
+      <h2>Why DXF Quality Matters for CNC Cutting</h2>
+      <p>CNC laser, plasma, and waterjet machines read toolpaths, not drawings. The quality of CAM conversion depends entirely on how clean the input DXF geometry is. Poor DXF geometry causes the laser head to pause at micro-gaps, plasma cutters to produce rough edges, and waterjet machines to lose cut accuracy.</p>
+
+      <h2>Common DXF Problems and Fixes</h2>
+      <p><strong>Gaps between segments:</strong> Use the JOIN command in AutoCAD with a 0.01mm fuzz distance, or Edit → Auto-Join in LightBurn with 0.1mm tolerance.</p>
+      <p><strong>Duplicate lines:</strong> Use the OVERKILL command in AutoCAD (set tolerance to 0.01mm).</p>
+      <p><strong>Open contours:</strong> Use PEDIT → Join to combine connected lines into a single closed LWPOLYLINE.</p>
+      <p><strong>Very short segments:</strong> pdf2dxf outputs true ARC entities for circular geometry. Use SIMPLIFY in AutoCAD to reduce vertex count on complex curves.</p>
+
+      <h2>Recommended DXF Settings for CNC Output</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:14px;margin:20px 0;">
+        <thead><tr style="border-bottom:1px solid var(--border)"><th style="text-align:left;padding:10px 12px;color:var(--muted)">Setting</th><th style="text-align:left;padding:10px 12px;color:var(--muted)">Recommended value</th><th style="text-align:left;padding:10px 12px;color:var(--muted)">Reason</th></tr></thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 12px">DXF version</td><td style="padding:10px 12px">R2010 (AC1024)</td><td style="padding:10px 12px;color:var(--muted)">Wide compatibility, supports LWPOLYLINE</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 12px">Units</td><td style="padding:10px 12px">Millimeters</td><td style="padding:10px 12px;color:var(--muted)">Match machine units</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 12px">Scale factor</td><td style="padding:10px 12px">1:1 for full-size parts</td><td style="padding:10px 12px;color:var(--muted)">Coordinates must equal real cut dimensions</td></tr>
+          <tr style="border-bottom:1px solid var(--border)"><td style="padding:10px 12px">Text layer</td><td style="padding:10px 12px">Disabled unless needed</td><td style="padding:10px 12px;color:var(--muted)">Text entities confuse CAM toolpath generation</td></tr>
+          <tr><td style="padding:10px 12px">Layers</td><td style="padding:10px 12px">Separate cut lines from engraving</td><td style="padding:10px 12px;color:var(--muted)">Allows different power/speed per operation</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Checklist Before Sending to Machine</h2>
+      <ul>
+        <li>All cut contours are closed (no open paths)</li>
+        <li>No duplicate entities (run OVERKILL)</li>
+        <li>Dimensions match the expected part size</li>
+        <li>Text on a separate layer, excluded from cutting</li>
+        <li>No entities outside the material boundary</li>
+        <li>Minimum feature size is above machine kerf width</li>
+      </ul>
     </div>
 
     <div class="cta-box">
       <h3>Need a smooth cut?</h3>
       <p>Upload your drawing now and get a CNC-optimized DXF in seconds.</p>
-      <a href="index.html" class="btn">Convert for CNC Now</a>
+      <a href="/" class="btn">Convert for CNC Now</a>
+    </div>
+
+    <div style="margin:48px 0;padding:32px;background:#0d0d14;border:1px solid #2a2a3e;border-radius:12px;text-align:center">
+      <p style="font-size:18px;font-weight:700;color:#f0f0f8;margin-bottom:8px">Ready to convert your PDF to DXF?</p>
+      <p style="color:#9090b0;margin-bottom:20px">No signup required. 5 free conversions/day. Layers and text preserved.</p>
+      <a href="https://pdf2dxf.us/" style="display:inline-block;padding:14px 32px;background:#00e5ff;color:#000;font-weight:700;border-radius:8px;text-decoration:none;font-size:15px">Try pdf2dxf Free →</a>
+    </div>
+    <div style="margin:32px 0">
+      <h3 style="font-size:16px;color:#9090b0;margin-bottom:16px">Related Articles</h3>
+      <ul style="list-style:none;padding:0;display:flex;flex-direction:column;gap:10px">
+        <li><a href="https://pdf2dxf.us/blog-fix-pdf-fonts.html" style="color:#00e5ff;text-decoration:none">→ How to Fix PDF Font Issues in AutoCAD</a></li>
+        <li><a href="https://pdf2dxf.us/blog-scanned-pdf-to-autocad.html" style="color:#00e5ff;text-decoration:none">→ Scanned PDF to AutoCAD: Raster to DXF Guide</a></li>
+        <li><a href="https://pdf2dxf.us/blog-dxf-vs-dwg.html" style="color:#00e5ff;text-decoration:none">→ DXF vs DWG: Which Format?</a></li>
+        <li><a href="https://pdf2dxf.us/blog-pdf-to-solidworks-dxf.html" style="color:#00e5ff;text-decoration:none">→ PDF to SolidWorks DXF</a></li>
+        <li><a href="https://pdf2dxf.us/guides.html" style="color:#00e5ff;text-decoration:none">→ All Engineering Guides</a></li>
+      </ul>
     </div>
   </article>
 
@@ -138,12 +178,6 @@ if (window.location.hostname.includes('github.io')) {
     © 2026 pdf2dxf.us — Built for engineers
   </footer>
 </div>
-
-  <h2>Why DXF Quality Matters for CNC Cutting</h2>
-  <p>CNC laser, plasma, and waterjet machines read toolpaths, not drawings. The CAM software (LightBurn, SheetCam, Fusion 360 CAM, Mastercam) converts DXF geometry into machine instructions — G-code or proprietary formats. The quality of that conversion depends entirely on how clean the input DXF geometry is.</p>
-  <p>Poor DXF geometry causes tangible problems on the machine: the laser head pauses at micro-gaps between line segments, plasma cutters produce rough edges at corners where arcs were approximated as polylines, and waterjet machines lose cut accuracy when polyline vertices are too close together.</p>
-
-  <h2>Common DXF Problems from PDF Conversion and How to Fix Them</h2>
 
   <h3>1. Gaps between segments (most common)</h3>
   <p>PDF paths are defined as sequences of move-to and line-to commands. When a converter creates separate LINE entities for each segment, floating point rounding means adjacent line endpoints may be 0.001mm apart rather than exactly coincident. CAM software treats these as open contours and cannot generate a closed toolpath.</p>
