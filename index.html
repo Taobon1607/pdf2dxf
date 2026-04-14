@@ -1239,6 +1239,7 @@ if (window.electronAPI) {
 let files = [];
 let usageRemaining = 5;
 let proKey = '';
+let isPro = false;
 
 // Force-set Electron environment immediately to prevent UI flicker
 if (window.electronAPI) {
@@ -1807,7 +1808,9 @@ async function submitContactForm(e) {
     }
   ]
 }
+</script>
 
+<script>
 // ── Delete countdown after download ────────────────────────
 function startDeleteCountdown() {
   const badge = document.getElementById('deleteBadge');
