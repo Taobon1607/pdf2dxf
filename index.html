@@ -11,8 +11,10 @@
     gtag('js', new Date());
     gtag('config', 'G-6D2KCTWQYL');
   }
-  // Redirect /index.html to / for canonical consistency
-  if (window.location.pathname.endsWith('/index.html')) {
+  // Redirect /index.html → / for canonical consistency (web only, not in Electron/file://)
+  if (!window.electronAPI &&
+      window.location.protocol !== 'file:' &&
+      window.location.pathname.endsWith('/index.html')) {
     window.location.replace(window.location.href.replace('/index.html', '/'));
   }
 </script>
@@ -718,20 +720,20 @@
 <!-- Hero -->
 <div class="container">
   <section class="hero">
-    <div class="badge" id="heroBadge">Offline Professional Edition</div>
+    <div class="badge" id="heroBadge">PDF to DXF Converter — Free Online</div>
     <h1 id="heroTitle">
-      <span class="line-dim">PDF & Image to DXF</span><br>
-      <span class="line-accent">100% Private & Offline</span>
+      <span class="line-dim">PDF &amp; Image to DXF</span><br>
+      <span class="line-accent">Layers, Text &amp; Arcs — Preserved</span>
     </h1>
     <p class="hero-sub" id="heroSub">
-      Convert with zero data tracking. No files ever leave your PC.<br>
-      High-precision vector engine.
+      Free online converter. No signup, no limits on small files.<br>
+      Vector engine built for CAD professionals.
     </p>
     <div class="stats">
-      <div class="stat"><span class="stat-num">R12–R2018</span><span class="stat-label">Full Support</span></div>
-      <div class="stat"><span class="stat-num">∞</span><span class="stat-label">No Limits</span></div>
+      <div class="stat"><span class="stat-num">R12–R2018</span><span class="stat-label">All Versions</span></div>
+      <div class="stat"><span class="stat-num">5</span><span class="stat-label">Free/Day</span></div>
       <div class="stat"><span class="stat-num">100%</span><span class="stat-label">Privacy Shield</span></div>
-      <div class="stat"><span class="stat-num">Pro</span><span class="stat-label">Software Active</span></div>
+      <div class="stat"><span class="stat-num">Free</span><span class="stat-label">No Account</span></div>
     </div>
   </section>
   <!-- Upload Card -->
@@ -1244,7 +1246,16 @@ if (window.electronAPI) {
     document.body.classList.add('is-electron');
     const logo = document.getElementById('mainLogo');
     if (logo) logo.innerHTML = 'pdf<span>2</span>dxf<span> Offline PRO</span>';
-    updateUsageUI(); // Cập nhật giao diện Pro ngay lập tức
+    // Swap hero text to Offline PRO mode
+    const badge = document.getElementById('heroBadge');
+    const title = document.getElementById('heroTitle');
+    const sub   = document.getElementById('heroSub');
+    const stats = document.querySelector('.stats');
+    if (badge) badge.textContent = 'Offline Professional Edition';
+    if (title) title.innerHTML = '<span class="line-dim">PDF &amp; Image to DXF</span><br><span class="line-accent">100% Private &amp; Offline</span>';
+    if (sub)   sub.innerHTML = 'Convert with zero data tracking. No files ever leave your PC.<br>High-precision vector engine.';
+    if (stats) stats.innerHTML = '<div class="stat"><span class="stat-num">R12–R2018</span><span class="stat-label">Full Support</span></div><div class="stat"><span class="stat-num">∞</span><span class="stat-label">No Limits</span></div><div class="stat"><span class="stat-num">100%</span><span class="stat-label">Privacy Shield</span></div><div class="stat"><span class="stat-num">Pro</span><span class="stat-label">Software Active</span></div>';
+    updateUsageUI(); // Update Pro status immediately
   });
 }
 
